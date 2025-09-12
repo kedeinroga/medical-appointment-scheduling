@@ -13,7 +13,8 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
     '^@medical-appointment/core-domain$': '<rootDir>/../domain/src',
-    '^@medical-appointment/core-domain/(.*)$': '<rootDir>/../domain/src/$1'
+    '^@medical-appointment/core-domain/(.*)$': '<rootDir>/../domain/src/$1',
+    '^@medical-appointment/shared$': '<rootDir>/../../shared/src',
   },
   setupFilesAfterEnv: ['<rootDir>/../../../jest.setup.ts']
 };

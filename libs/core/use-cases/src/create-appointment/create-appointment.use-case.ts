@@ -9,10 +9,10 @@ import {
   InsuredId 
 } from '@medical-appointment/core-domain';
 import { Logger } from '@aws-lambda-powertools/logger';
+import { maskInsuredId } from '@medical-appointment/shared';
 
 import { IEventBus } from '../ports/event-bus.port';
 import { CreateAppointmentDto, CreateAppointmentResponseDto } from './create-appointment.dto';
-import { maskInsuredId } from '../utils/pii-masking.util';
 
 const logger = new Logger({
   logLevel: 'INFO',

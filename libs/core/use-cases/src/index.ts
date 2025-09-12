@@ -20,7 +20,4 @@ export * from './complete-appointment/complete-appointment.use-case';
 // Ports
 export * from './ports/event-bus.port';
 
-// Utils
-export * from './utils/pii-masking.util';
-
 export const USE_CASES_LAYER_VERSION = '1.0.0';
