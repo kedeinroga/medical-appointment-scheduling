@@ -1,5 +1,5 @@
 Resources:
-  # Simple parameters with Overwrite: true to handle existing parameters
+  # Simple parameters - CloudFormation will update existing ones automatically
   RDSDatabaseParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -7,12 +7,22 @@ Resources:
       Type: String
       Value: medical_appointments
       Description: Database name for Medical Appointment
-      Overwrite: true
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
 
-  # RDS Connection Parameters with dependencies and Overwrite: true
+  RDSUsernameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /medical-appointment/${self:provider.stage}/rds/username
+      Type: String
+      Value: admin
+      Description: Database username for Medical Appointment
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
+
+  # RDS Connection Parameters with explicit dependencies
   RDSHostParameter:
     Type: AWS::SSM::Parameter
     DependsOn: RDSInstance
@@ -21,7 +31,6 @@ Resources:
       Type: String
       Value: !GetAtt RDSInstance.Endpoint.Address
       Description: RDS endpoint for Medical Appointment DB
-      Overwrite: true
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
@@ -34,7 +43,6 @@ Resources:
       Type: String
       Value: !GetAtt RDSInstance.Endpoint.Port
       Description: RDS port for Medical Appointment DB
-      Overwrite: true
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
@@ -47,7 +55,6 @@ Resources:
       Type: String
       Value: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
       Description: Database password for Medical Appointment (from Secrets Manager)
-      Overwrite: true
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
@@ -61,7 +68,6 @@ Resources:
       Type: String
       Value: !Ref ServerlessDeploymentBucket
       Description: S3 bucket for serverless deployments
-      Overwrite: true
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
