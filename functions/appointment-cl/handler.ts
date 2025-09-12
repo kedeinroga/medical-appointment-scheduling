@@ -1,167 +1,232 @@
-// External dependencies (alphabetical, @ first)
-import { Logger } from '@aws-lambda-powertools/logger';
-import { SQSEvent, SQSHandler } from 'aws-lambda';
+/**
+ * Appointment CL Lambda Handler - Clean Architecture Implementation
+ * Processes SQS messages for Chile appointments with proper dependency injection
+ */
 
-// Application layer
-import { 
-  ProcessAppointmentDto,
-  ProcessAppointmentUseCase 
-} from '@medical-appointment/core-use-cases';
+// External dependencies
+import { SQSEvent, SQSHandler, Context } from 'aws-lambda';
+
+// Shared utilities
+import { logBusinessError, logInfrastructureError, maskInsuredId } from '@medical-appointment/shared';
+
+// Application layer imports  
+import { ProcessAppointmentDto } from '@medical-appointment/core-use-cases';
 import { ValidationError } from '@medical-appointment/shared';
 
 // Infrastructure layer
 import { UseCaseFactory } from '@medical-appointment/infrastructure';
 
-// Same layer modules (alphabetical)
-import { COUNTRY_PROCESSING, ERROR_CODES, LOG_EVENTS, REQUIRED_MESSAGE_FIELDS } from './constants';
-
-// Initialize logger
-const logger = new Logger({
-  serviceName: 'medical-appointment-scheduling',
-  logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
-});
+// Handler layer imports
+import { COUNTRY_PROCESSING, LOG_EVENTS } from './constants';
 
 /**
- * Mask insured ID to protect PII in logs
+ * Handler Dependencies
  */
-const maskInsuredId = (insuredId: string): string => {
-  if (!insuredId || insuredId.length !== 5) return '***';
-  return `${insuredId.substring(0, 2)}***`;
-};
+interface Dependencies {
+  processAppointmentUseCase: any;
+  logger: any;
+}
 
 /**
- * Parse SNS message from SQS record
+ * Dependency Factory with lazy loading
  */
-const parseSNSMessage = (recordBody: string): any => {
-  try {
-    const snsMessage = JSON.parse(recordBody);
-    return JSON.parse(snsMessage.Message);
-  } catch (parseError) {
-    throw new ValidationError('messageBody', ERROR_CODES.INVALID_JSON_FORMAT);
+class DependencyFactory {
+  private static dependencies: Dependencies | null = null;
+
+  static create(): Dependencies {
+    if (this.dependencies) {
+      return this.dependencies;
+    }
+
+    const { Logger } = require('@aws-lambda-powertools/logger');
+    
+    const logger = new Logger({
+      serviceName: 'medical-appointment-cl-processor',
+      logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
+    });
+
+    // Lazy loading of use case to allow for mocking in tests
+    let processAppointmentUseCase: any = null;
+    
+    const getProcessAppointmentUseCase = () => {
+      if (!processAppointmentUseCase) {
+        processAppointmentUseCase = UseCaseFactory.createProcessAppointmentUseCase();
+      }
+      return processAppointmentUseCase;
+    };
+
+    this.dependencies = {
+      processAppointmentUseCase: {
+        execute: (...args: any[]) => getProcessAppointmentUseCase().execute(...args)
+      },
+      logger
+    };
+
+    return this.dependencies;
   }
-};
 
-/**
- * Validate required fields in message
- */
-const validateMessageFields = (messageBody: any): void => {
-  const missingFields = REQUIRED_MESSAGE_FIELDS.filter(field => !messageBody[field]);
-  
-  if (missingFields.length > 0) {
-    throw new ValidationError(
-      'messageFields', 
-      `Missing required fields in message: ${missingFields.join(', ')}`
-    );
+  static reset() {
+    this.dependencies = null;
   }
-};
+}
 
 /**
- * Lambda handler for processing appointments in Chile (CL)
- * Triggered by SQS messages from SNS topic
+ * Message Processing Service
  */
-export const main: SQSHandler = async (event: SQSEvent): Promise<void> => {
-  const requestId = event.Records[0]?.messageId || 'unknown';
-  
-  logger.info(LOG_EVENTS.CL_APPOINTMENT_PROCESSING_STARTED.message, {
-    logId: LOG_EVENTS.CL_APPOINTMENT_PROCESSING_STARTED.logId,
-    requestId,
-    recordCount: event.Records.length,
-    eventSource: 'SQS',
-    country: COUNTRY_PROCESSING.CHILE
-  });
+class MessageProcessor {
+  constructor(private deps: Dependencies) {}
 
-  for (const record of event.Records) {
+  async processRecord(record: any, requestId: string) {
+    const messageId = record.messageId;
+
     try {
-      logger.info('Processing SQS record for CL', {
-        logId: 'sqs-record-processing-started',
-        messageId: record.messageId,
-        receiptHandle: record.receiptHandle.substring(0, 20) + '...', // Truncate for security
-        country: COUNTRY_PROCESSING.CHILE
-      });
+      // Parse SNS message
+      const snsMessage = JSON.parse(record.body);
+      const appointmentData = JSON.parse(snsMessage.Message);
 
-      // Parse the SNS message from SQS
-      const messageBody = parseSNSMessage(record.body);
-
-      // Validate message structure
-      validateMessageFields(messageBody);
-
-      // Extract fields (alphabetical order)
-      const { appointmentId, countryISO, insuredId, scheduleId } = messageBody;
-
-      // Verify this is for Chile
-      if (countryISO !== COUNTRY_PROCESSING.EXPECTED_COUNTRY) {
-        logger.warn(LOG_EVENTS.WRONG_COUNTRY_MESSAGE.message, {
-          logId: LOG_EVENTS.WRONG_COUNTRY_MESSAGE.logId,
-          messageId: record.messageId,
-          expectedCountry: COUNTRY_PROCESSING.EXPECTED_COUNTRY,
-          actualCountry: countryISO
+      // Validate country
+      if (appointmentData.countryISO !== 'CL') {
+        this.deps.logger.info('Skipping message - wrong country', {
+          messageId,
+          country: appointmentData.countryISO,
+          expected: 'CL'
         });
-        continue; // Skip this message
+        return { messageId, skipped: true, reason: 'wrong_country' };
       }
 
-      // Create DTO for processing (alphabetical order)
+      // Create DTO
       const processDto: ProcessAppointmentDto = {
-        appointmentId,
-        countryISO: COUNTRY_PROCESSING.CHILE as 'CL',
-        insuredId,
-        scheduleId: Number(scheduleId)
+        appointmentId: appointmentData.appointmentId,
+        insuredId: appointmentData.insuredId,
+        countryISO: appointmentData.countryISO,
+        scheduleId: appointmentData.scheduleId
       };
 
-      logger.info('Processing appointment for CL', {
-        logId: 'appointment-processing-initiated',
-        appointmentId,
-        insuredId: maskInsuredId(insuredId),
-        scheduleId,
-        country: COUNTRY_PROCESSING.CHILE
-      });
+      // Execute use case
+      await this.deps.processAppointmentUseCase.execute(processDto);
 
-      // Initialize use case
-      const processAppointmentUseCase = UseCaseFactory.createProcessAppointmentUseCase();
-
-      // Execute the use case - Chile specific logic will be handled inside the use case
-      const result = await processAppointmentUseCase.execute(processDto);
-
-      logger.info(LOG_EVENTS.CL_APPOINTMENT_PROCESSED.message, {
+      this.deps.logger.info('Appointment processed successfully', {
         logId: LOG_EVENTS.CL_APPOINTMENT_PROCESSED.logId,
-        appointmentId,
-        insuredId: maskInsuredId(insuredId),
-        scheduleId,
-        country: COUNTRY_PROCESSING.CHILE,
-        status: result.status,
-        success: true
+        messageId,
+        appointmentId: appointmentData.appointmentId,
+        insuredId: maskInsuredId(appointmentData.insuredId),
+        country: 'CL'
       });
+
+      return { messageId, success: true };
 
     } catch (error) {
-      const errorInstance = error as Error;
+      const err = error as Error;
       
-      logger.error(LOG_EVENTS.CL_APPOINTMENT_PROCESSING_ERROR.message, {
-        logId: LOG_EVENTS.CL_APPOINTMENT_PROCESSING_ERROR.logId,
-        messageId: record.messageId,
-        errorType: errorInstance.constructor.name,
-        errorMessage: errorInstance.message,
-        country: COUNTRY_PROCESSING.CHILE,
-        success: false
-      });
-
-      // For production, you might want to send failed messages to a DLQ
-      // or implement retry logic. For now, we'll continue processing other messages
       if (error instanceof ValidationError) {
-        logger.error('Validation error, skipping message', {
-          logId: 'validation-error-skip',
-          messageId: record.messageId,
-          errorMessage: errorInstance.message
-        });
-        continue;
+        logBusinessError(this.deps.logger, err, { messageId, requestId });
+        return { 
+          messageId, 
+          success: false, 
+          error: { type: 'validation', message: err.message }
+        };
       }
 
-      // For other errors, you might want to throw to trigger SQS retry mechanism
-      throw error;
+      logInfrastructureError(this.deps.logger, err, { messageId, requestId });
+      return { 
+        messageId, 
+        success: false, 
+        error: { type: 'infrastructure', message: err.message }
+      };
     }
   }
+}
 
-  logger.info('CL appointment processing completed', {
-    logId: 'cl-processing-completed',
-    processedRecords: event.Records.length,
-    country: COUNTRY_PROCESSING.CHILE
-  });
+/**
+ * Batch Processing Service
+ */
+class BatchProcessor {
+  constructor(
+    private deps: Dependencies,
+    private messageProcessor: MessageProcessor
+  ) {}
+
+  async processBatch(event: SQSEvent, requestId: string) {
+    const startTime = Date.now();
+    const totalRecords = event.Records.length;
+
+    this.deps.logger.info('Starting batch processing', {
+      logId: LOG_EVENTS.CL_APPOINTMENT_PROCESSING_STARTED.logId,
+      requestId,
+      totalRecords,
+      targetCountry: 'CL'
+    });
+
+    const results = [];
+    let processed = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (const record of event.Records) {
+      const result = await this.messageProcessor.processRecord(record, requestId);
+      results.push(result);
+
+      if (result.success) processed++;
+      else if (result.skipped) skipped++;
+      else failed++;
+    }
+
+    const executionTime = Date.now() - startTime;
+
+    this.deps.logger.info('Batch processing completed', {
+      logId: LOG_EVENTS.CL_APPOINTMENT_PROCESSED.logId,
+      requestId,
+      totalRecords,
+      processed,
+      failed,
+      skipped,
+      executionTime
+    });
+
+    return {
+      totalRecords,
+      processed,
+      failed,
+      skipped,
+      executionTime,
+      results
+    };
+  }
+}
+
+/**
+ * Main Lambda Handler
+ */
+export const main: SQSHandler = async (event: SQSEvent, context: Context): Promise<void> => {
+  const requestId = context.awsRequestId;
+
+  try {
+    // Step 1: Create dependencies (Infrastructure -> Use Cases)
+    const dependencies = DependencyFactory.create();
+
+    // Step 2: Create services with dependency injection
+    const messageProcessor = new MessageProcessor(dependencies);
+    const batchProcessor = new BatchProcessor(dependencies, messageProcessor);
+
+    // Step 3: Process batch
+    const summary = await batchProcessor.processBatch(event, requestId);
+
+    // Step 4: Handle partial failures
+    if (summary.failed > 0) {
+      dependencies.logger.warn('Some records failed processing', {
+        requestId,
+        failedCount: summary.failed,
+        totalRecords: summary.totalRecords
+      });
+    }
+
+  } catch (error) {
+    const dependencies = DependencyFactory.create();
+    logInfrastructureError(dependencies.logger, error as Error, { 
+      requestId, 
+      operation: 'batch-processing' 
+    });
+    
+    throw error;
+  }
 };

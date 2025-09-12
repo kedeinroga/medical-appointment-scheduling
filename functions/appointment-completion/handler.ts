@@ -1,170 +1,192 @@
-// External dependencies (alphabetical, @ first)
-import { Logger } from '@aws-lambda-powertools/logger';
-import { SQSEvent, SQSHandler } from 'aws-lambda';
+/**
+ * Appointment Completion Lambda Handler - Clean Architecture Implementation
+ * Processes SQS messages for appointment completion with proper dependency injection
+ */
 
-// Application layer
-import { 
-  CompleteAppointmentDto,
-  CompleteAppointmentUseCase 
-} from '@medical-appointment/core-use-cases';
+// External dependencies
+import { SQSEvent, SQSHandler, Context } from 'aws-lambda';
+
+// Shared utilities
+import { logBusinessError, logInfrastructureError, maskInsuredId } from '@medical-appointment/shared';
+
+// Application layer imports  
+import { CompleteAppointmentDto } from '@medical-appointment/core-use-cases';
 import { ValidationError } from '@medical-appointment/shared';
 
 // Infrastructure layer
 import { UseCaseFactory } from '@medical-appointment/infrastructure';
 
-// Same layer modules (alphabetical)
-import { APPOINTMENT_STATUS, ERROR_CODES, LOG_EVENTS, REQUIRED_MESSAGE_FIELDS } from './constants';
-
-// Initialize logger
-const logger = new Logger({
-  serviceName: 'medical-appointment-scheduling',
-  logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
-});
-
-// Initialize dependencies for completion processing
-const completeAppointmentUseCase = UseCaseFactory.createCompleteAppointmentUseCase();
+// Handler layer imports
+import { LOG_EVENTS } from './constants';
 
 /**
- * Mask insured ID to protect PII in logs
+ * Handler Dependencies
  */
-const maskInsuredId = (insuredId: string): string => {
-  if (!insuredId || insuredId.length !== 5) return '***';
-  return `${insuredId.substring(0, 2)}***`;
-};
+interface Dependencies {
+  completeAppointmentUseCase: any;
+  logger: any;
+}
 
 /**
- * Parse EventBridge message from SQS record
+ * Dependency Factory with lazy loading
  */
-const parseEventBridgeMessage = (recordBody: string): any => {
-  try {
-    let messageBody = JSON.parse(recordBody);
-    
-    // If it's wrapped in an EventBridge envelope, extract the detail
-    if (messageBody.detail && messageBody['detail-type']) {
-      messageBody = messageBody.detail;
+class DependencyFactory {
+  private static dependencies: Dependencies | null = null;
+
+  static create(): Dependencies {
+    if (this.dependencies) {
+      return this.dependencies;
     }
+
+    const { Logger } = require('@aws-lambda-powertools/logger');
     
-    return messageBody;
-  } catch (parseError) {
-    throw new ValidationError('messageBody', ERROR_CODES.INVALID_JSON_FORMAT);
+    const logger = new Logger({
+      serviceName: 'medical-appointment-completion-processor',
+      logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
+    });
+
+    this.dependencies = {
+      completeAppointmentUseCase: UseCaseFactory.createCompleteAppointmentUseCase(),
+      logger
+    };
+
+    return this.dependencies;
   }
-};
+
+  static reset() {
+    this.dependencies = null;
+  }
+}
 
 /**
- * Validate required fields in message
+ * Event Processing Service
  */
-const validateMessageFields = (messageBody: any): void => {
-  const missingFields = REQUIRED_MESSAGE_FIELDS.filter(field => !messageBody[field]);
-  
-  if (missingFields.length > 0) {
-    throw new ValidationError(
-      'messageFields', 
-      `Missing required fields in message: ${missingFields.join(', ')}`
-    );
-  }
-};
+class EventProcessor {
+  constructor(private deps: Dependencies) {}
 
-/**
- * Lambda handler for completing appointments
- * Triggered by SQS messages from EventBridge after PE/CL processing
- */
-export const main: SQSHandler = async (event: SQSEvent): Promise<void> => {
-  const requestId = event.Records[0]?.messageId || 'unknown';
-  
-  logger.info(LOG_EVENTS.APPOINTMENT_COMPLETION_STARTED.message, {
-    logId: LOG_EVENTS.APPOINTMENT_COMPLETION_STARTED.logId,
-    requestId,
-    recordCount: event.Records.length,
-    eventSource: 'SQS'
-  });
-
-  for (const record of event.Records) {
+  async processEvent(eventData: any, requestId: string) {
     try {
-      logger.info('Processing completion SQS record', {
-        logId: 'completion-sqs-record-processing-started',
-        messageId: record.messageId,
-        receiptHandle: record.receiptHandle.substring(0, 20) + '...' // Truncate for security
-      });
-
-      // Parse the EventBridge message from SQS
-      const messageBody = parseEventBridgeMessage(record.body);
-
-      // Validate message structure
-      validateMessageFields(messageBody);
-
-      // Extract fields (alphabetical order)
-      const { appointmentId, countryISO, insuredId, scheduleId, status } = messageBody;
-
-      // Validate that the appointment was processed successfully
-      if (status !== APPOINTMENT_STATUS.PROCESSED) {
-        logger.warn(LOG_EVENTS.NON_PROCESSED_STATUS.message, {
-          logId: LOG_EVENTS.NON_PROCESSED_STATUS.logId,
-          messageId: record.messageId,
-          appointmentId,
-          currentStatus: status
-        });
-        continue; // Skip this message
+      // Handle EventBridge format (with detail wrapper)
+      let actualData = eventData;
+      if (eventData.detail && eventData['detail-type']) {
+        actualData = eventData.detail;
       }
 
-      // Create DTO for completion (alphabetical order)
+      // Validate required fields
+      if (!actualData.appointmentId || !actualData.insuredId || !actualData.countryISO || !actualData.scheduleId) {
+        throw new ValidationError('MISSING_REQUIRED_FIELDS', 'Missing required fields for appointment completion');
+      }
+
+      // Validate that status is PROCESSED
+      if (actualData.status?.toLowerCase() !== 'processed') {
+        this.deps.logger.info('Skipping event - status not PROCESSED', {
+          appointmentId: actualData.appointmentId,
+          currentStatus: actualData.status,
+          expectedStatus: 'PROCESSED'
+        });
+        return { skipped: true, reason: 'status_not_processed' };
+      }
+
+      // Create DTO
       const completeDto: CompleteAppointmentDto = {
-        appointmentId,
-        countryISO,
-        insuredId,
-        scheduleId: Number(scheduleId)
+        appointmentId: actualData.appointmentId,
+        insuredId: actualData.insuredId,
+        countryISO: actualData.countryISO,
+        scheduleId: actualData.scheduleId
       };
 
-      logger.info('Completing appointment', {
-        logId: 'appointment-completion-initiated',
-        appointmentId,
-        insuredId: maskInsuredId(insuredId),
-        countryISO
-      });
+      // Execute use case
+      await this.deps.completeAppointmentUseCase.execute(completeDto);
 
-      // Initialize use case
-      const completeAppointmentUseCase = UseCaseFactory.createCompleteAppointmentUseCase();
-
-      // Execute the use case
-      const result = await completeAppointmentUseCase.execute(completeDto);
-
-      logger.info(LOG_EVENTS.APPOINTMENT_COMPLETED.message, {
+      this.deps.logger.info('Appointment completed successfully', {
         logId: LOG_EVENTS.APPOINTMENT_COMPLETED.logId,
-        appointmentId,
-        insuredId: maskInsuredId(insuredId),
-        countryISO,
-        status: result.status,
-        success: true
+        appointmentId: actualData.appointmentId,
+        insuredId: maskInsuredId(actualData.insuredId),
+        country: actualData.countryISO,
+        scheduleId: actualData.scheduleId
       });
+
+      return { success: true };
 
     } catch (error) {
-      const errorInstance = error as Error;
+      const err = error as Error;
       
-      logger.error(LOG_EVENTS.APPOINTMENT_COMPLETION_ERROR.message, {
-        logId: LOG_EVENTS.APPOINTMENT_COMPLETION_ERROR.logId,
-        messageId: record.messageId,
-        errorType: errorInstance.constructor.name,
-        errorMessage: errorInstance.message,
-        success: false
-      });
-
-      // For production, you might want to send failed messages to a DLQ
-      // or implement retry logic. For now, we'll continue processing other messages
       if (error instanceof ValidationError) {
-        logger.error('Validation error, skipping message', {
-          logId: 'validation-error-skip',
-          messageId: record.messageId,
-          errorMessage: errorInstance.message
-        });
-        continue;
+        logBusinessError(this.deps.logger, err, { requestId });
+        return { 
+          success: false, 
+          error: { type: 'validation', message: err.message }
+        };
       }
 
-      // For other errors, you might want to throw to trigger SQS retry mechanism
-      throw error;
+      logInfrastructureError(this.deps.logger, err, { requestId });
+      return { 
+        success: false, 
+        error: { type: 'infrastructure', message: err.message }
+      };
     }
   }
+}
 
-  logger.info('Appointment completion processing finished', {
-    logId: 'completion-processing-finished',
-    processedRecords: event.Records.length
-  });
+/**
+ * Main Lambda Handler
+ */
+export const main: SQSHandler = async (event: SQSEvent, context: Context): Promise<void> => {
+  const requestId = context.awsRequestId;
+
+  try {
+    // Step 1: Create dependencies (Infrastructure -> Use Cases)
+    const dependencies = DependencyFactory.create();
+
+    // Step 2: Create service with dependency injection
+    const eventProcessor = new EventProcessor(dependencies);
+
+    // Step 3: Process each SQS record
+    dependencies.logger.info('Processing appointment completion batch', {
+      logId: LOG_EVENTS.APPOINTMENT_COMPLETION_STARTED.logId,
+      requestId,
+      recordCount: event.Records.length
+    });
+
+    for (const record of event.Records) {
+      try {
+        // Parse the SQS record body
+        const eventData = JSON.parse(record.body);
+        
+        const result = await eventProcessor.processEvent(eventData, requestId);
+
+        if (result.skipped) {
+          dependencies.logger.info('Event processing skipped', {
+            messageId: record.messageId,
+            reason: result.reason
+          });
+        } else if (result.success) {
+          dependencies.logger.info('Event processed successfully', {
+            logId: LOG_EVENTS.APPOINTMENT_COMPLETED.logId,
+            messageId: record.messageId
+          });
+        } else {
+          dependencies.logger.error('Event processing failed', {
+            messageId: record.messageId,
+            error: result.error
+          });
+        }
+      } catch (parseError) {
+        dependencies.logger.error('Failed to parse SQS record body', {
+          messageId: record.messageId,
+          error: (parseError as Error).message
+        });
+        // Continue processing other records
+      }
+    }
+
+  } catch (error) {
+    const dependencies = DependencyFactory.create();
+    logInfrastructureError(dependencies.logger, error as Error, { 
+      requestId, 
+      operation: 'batch-completion-processing' 
+    });
+    
+    throw error;
+  }
 };
