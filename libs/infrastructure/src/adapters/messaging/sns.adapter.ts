@@ -1,0 +1,126 @@
+// Third-party imports
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { Logger } from '@aws-lambda-powertools/logger';
+
+// Domain imports
+import { CountryISO, IMessagingPort } from '@medical-appointment/core-domain';
+
+// Infrastructure imports
+import { AWS_CONFIG } from '../../config/aws.config';
+import { SNSError } from '../../errors/aws.errors';
+
+/**
+ * SNS Adapter for messaging operations
+ * Implements the Adapter pattern to integrate with AWS SNS
+ */
+export class SNSAdapter implements IMessagingPort {
+  private readonly snsClient: SNSClient;
+  private readonly logger: Logger;
+  private readonly topicArn: string;
+
+  constructor() {
+    this.snsClient = new SNSClient({
+      region: AWS_CONFIG.AWS_REGION
+    });
+    this.logger = new Logger({
+      serviceName: 'sns-adapter'
+    });
+    this.topicArn = AWS_CONFIG.APPOINTMENTS_TOPIC_ARN;
+  }
+
+  async publishAppointmentCreated(appointmentData: {
+    appointmentId: string;
+    countryISO: string;
+    insuredId: string;
+    scheduleId: number;
+  }): Promise<void> {
+    try {
+      const message = {
+        appointmentId: appointmentData.appointmentId,
+        countryISO: appointmentData.countryISO,
+        eventType: 'AppointmentCreated',
+        insuredId: appointmentData.insuredId,
+        scheduleId: appointmentData.scheduleId,
+        timestamp: new Date().toISOString()
+      };
+
+      const command = new PublishCommand({
+        Message: JSON.stringify(message),
+        MessageAttributes: {
+          countryISO: {
+            DataType: 'String',
+            StringValue: appointmentData.countryISO
+          },
+          eventType: {
+            DataType: 'String',
+            StringValue: 'AppointmentCreated'
+          }
+        },
+        TopicArn: this.topicArn
+      });
+
+      const result = await this.snsClient.send(command);
+
+      this.logger.info('Appointment created message published successfully', {
+        appointmentId: appointmentData.appointmentId,
+        countryISO: appointmentData.countryISO,
+        messageId: result.MessageId,
+        topicArn: this.topicArn
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to publish appointment created message', {
+        appointmentId: appointmentData.appointmentId,
+        countryISO: appointmentData.countryISO,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new SNSError('publishAppointmentCreated', error as Error);
+    }
+  }
+
+  async publishMessage(message: any, attributes?: Record<string, string>): Promise<void> {
+    try {
+      const messageAttributes: Record<string, any> = {};
+
+      if (attributes) {
+        Object.entries(attributes).forEach(([key, value]) => {
+          messageAttributes[key] = {
+            DataType: 'String',
+            StringValue: value
+          };
+        });
+      }
+
+      const command = new PublishCommand({
+        Message: JSON.stringify(message),
+        MessageAttributes: messageAttributes,
+        TopicArn: this.topicArn
+      });
+
+      const result = await this.snsClient.send(command);
+
+      this.logger.info('Message published successfully', {
+        messageId: result.MessageId,
+        topicArn: this.topicArn
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to publish message', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        topicArn: this.topicArn
+      });
+      throw new SNSError('publishMessage', error as Error);
+    }
+  }
+
+  async publishToCountrySpecificTopic(
+    message: any, 
+    countryISO: CountryISO, 
+    eventType: string
+  ): Promise<void> {
+    await this.publishMessage(message, {
+      countryISO: countryISO.getValue(),
+      eventType
+    });
+  }
+}

@@ -30,6 +30,7 @@ export * from './repositories/schedule.repository';
 
 // Ports
 export * from './ports/event-bus.port';
+export * from './ports/messaging.port';
 
 // Errors
 export * from './errors/appointment.errors';

@@ -70,3 +70,31 @@ export function maskEmail(email: string): string {
   
   return `${maskedUsername}@${maskedDomain}`;
 }
+
+/**
+ * Masks phone number showing only last 4 digits (alternative format)
+ * @param phone - The phone number to mask
+ * @returns Masked phone (e.g., "***-***-1234")
+ */
+export function maskPhone(phone: string): string {
+  if (!phone || phone.length < 4) {
+    return '***';
+  }
+  const lastFour = phone.slice(-4);
+  return `***-***-${lastFour}`;
+}
+
+/**
+ * Masks appointment schedule details for logging
+ * @param scheduleData - The schedule data to mask
+ * @returns Masked schedule data
+ */
+export function maskScheduleData(scheduleData: any): any {
+  return {
+    hasScheduleId: !!scheduleData?.scheduleId,
+    hasCenterId: !!scheduleData?.centerId,
+    hasDate: !!scheduleData?.date,
+    hasSpecialtyId: !!scheduleData?.specialtyId,
+    hasMedicId: !!scheduleData?.medicId
+  };
+}

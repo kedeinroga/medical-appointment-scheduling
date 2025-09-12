@@ -1,4 +1,4 @@
-import { maskInsuredId, maskPhoneNumber, maskEmail } from '../pii-masking.util';
+import { maskInsuredId, maskPhoneNumber, maskEmail, maskPhone, maskScheduleData } from '../pii-masking.util';
 import { TEST_PII_DATA, EXPECTED_MASKS } from './test.constants';
 
 describe('PII Masking Utilities', () => {
@@ -83,6 +83,87 @@ describe('PII Masking Utilities', () => {
       // Arrange & Act & Assert
       expect(maskEmail(TEST_PII_DATA.INVALID_EMAILS[2])).toBe(EXPECTED_MASKS.EMAIL.INVALID); // 'test@'
       expect(maskEmail(TEST_PII_DATA.INVALID_EMAILS[3])).toBe(EXPECTED_MASKS.EMAIL.INVALID); // '@domain.com'
+    });
+  });
+
+  describe(maskPhone.name, () => {
+    it('should mask valid phone number showing last 4 digits', () => {
+      expect(maskPhone('555-123-4567')).toBe('***-***-4567');
+    });
+
+    it('should mask numeric phone', () => {
+      expect(maskPhone('5551234567')).toBe('***-***-4567');
+    });
+
+    it('should return *** for short phone', () => {
+      expect(maskPhone('123')).toBe('***');
+    });
+
+    it('should return *** for empty string', () => {
+      expect(maskPhone('')).toBe('***');
+    });
+  });
+
+  describe(maskScheduleData.name, () => {
+    it('should mask complete schedule data', () => {
+      const scheduleData = {
+        scheduleId: 100,
+        centerId: 1,
+        date: '2025-01-15',
+        specialtyId: 2,
+        medicId: 3
+      };
+
+      const result = maskScheduleData(scheduleData);
+
+      expect(result).toEqual({
+        hasScheduleId: true,
+        hasCenterId: true,
+        hasDate: true,
+        hasSpecialtyId: true,
+        hasMedicId: true
+      });
+    });
+
+    it('should handle partial schedule data', () => {
+      const scheduleData = {
+        scheduleId: 100,
+        date: '2025-01-15'
+      };
+
+      const result = maskScheduleData(scheduleData);
+
+      expect(result).toEqual({
+        hasScheduleId: true,
+        hasCenterId: false,
+        hasDate: true,
+        hasSpecialtyId: false,
+        hasMedicId: false
+      });
+    });
+
+    it('should handle null schedule data', () => {
+      const result = maskScheduleData(null);
+
+      expect(result).toEqual({
+        hasScheduleId: false,
+        hasCenterId: false,
+        hasDate: false,
+        hasSpecialtyId: false,
+        hasMedicId: false
+      });
+    });
+
+    it('should handle empty schedule data', () => {
+      const result = maskScheduleData({});
+
+      expect(result).toEqual({
+        hasScheduleId: false,
+        hasCenterId: false,
+        hasDate: false,
+        hasSpecialtyId: false,
+        hasMedicId: false
+      });
     });
   });
 });
