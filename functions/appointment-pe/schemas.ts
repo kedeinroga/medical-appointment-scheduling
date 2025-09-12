@@ -31,13 +31,9 @@ export const SNSMessageSchema = z.object({
 export const AppointmentPayloadSchema = z.object({
   appointmentId: z.string().min(1, 'Appointment ID is required'),
   insuredId: z.string().regex(/^\d{5}$/, 'Insured ID must be exactly 5 digits'),
-  countryISO: z.literal('PE', { 
-    errorMap: () => ({ message: 'Country must be PE for Peru processing' })
-  }),
+  countryISO: z.literal('PE'),
   scheduleId: z.number().int().positive('Schedule ID must be a positive integer'),
-  status: z.enum(['PENDING', 'PROCESSING', 'PROCESSED', 'COMPLETED', 'FAILED'], {
-    errorMap: () => ({ message: 'Invalid appointment status' })
-  }),
+  status: z.enum(['PENDING', 'PROCESSING', 'PROCESSED', 'COMPLETED', 'FAILED']),
   createdAt: z.string().datetime('Invalid datetime format for createdAt'),
   metadata: z.object({
     source: z.string().min(1, 'Source is required'),
