@@ -39,6 +39,7 @@ Resources:
     Properties:
       Bucket: !Ref ServerlessDeploymentBucket
       PolicyDocument:
+        Version: "2012-10-17"
         Statement:
           - Effect: Deny
             Principal: "*"
