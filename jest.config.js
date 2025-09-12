@@ -28,7 +28,7 @@ module.exports = {
       statements: 80
     }
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@medical-appointment/core-domain$': '<rootDir>/libs/core/domain/src',
     '^@medical-appointment/core-use-cases$': '<rootDir>/libs/core/use-cases/src',
     '^@medical-appointment/shared$': '<rootDir>/libs/shared/src',

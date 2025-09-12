@@ -3,6 +3,8 @@
 
 // Utils
 export * from './utils/pii-masking.util';
+export * from './utils/api-gateway.util';
+export * from './utils/logging.util';
 
 // Exceptions
 export * from './exceptions/business.exceptions';

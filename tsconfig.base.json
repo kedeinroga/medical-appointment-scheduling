@@ -24,6 +24,7 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "noEmit": true,
     "paths": {
       "@medical-appointment/core-domain": ["./libs/core/domain/src"],
       "@medical-appointment/core-use-cases": ["./libs/core/use-cases/src"],
@@ -32,12 +33,12 @@
     }
   },
   "include": [
-    "libs/**/*",
     "functions/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
+    "libs/**/*",
     "**/*.spec.ts",
     "**/*.test.ts"
   ]

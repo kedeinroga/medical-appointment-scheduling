@@ -3,9 +3,14 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    "baseUrl": ".",
     "noEmit": false,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "paths": {
+      "@medical-appointment/core-domain": ["../domain/src"],
+      "@medical-appointment/shared": ["../../shared/src"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "**/*.spec.ts", "**/*.test.ts"]

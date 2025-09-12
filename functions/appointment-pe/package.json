@@ -1,0 +1,22 @@
+{
+  "name": "appointment-pe-function",
+  "version": "1.0.0",
+  "description": "Lambda function for processing appointments in Peru (PE)",
+  "main": "handler.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "aws-lambda": "^1.0.7",
+    "@medical-appointment/core-use-cases": "workspace:*",
+    "@medical-appointment/infrastructure": "workspace:*",
+    "@medical-appointment/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/node": "^18.17.0",
+    "typescript": "^5.1.6"
+  }
+}

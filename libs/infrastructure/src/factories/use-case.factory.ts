@@ -1,5 +1,10 @@
 // Use Cases imports
-import { CreateAppointmentUseCase, GetAppointmentsByInsuredIdUseCase } from '@medical-appointment/core-use-cases';
+import { 
+  CreateAppointmentUseCase, 
+  GetAppointmentsByInsuredIdUseCase,
+  ProcessAppointmentUseCase,
+  CompleteAppointmentUseCase 
+} from '@medical-appointment/core-use-cases';
 
 // Infrastructure imports
 import { DynamoDBAppointmentRepository } from '../adapters/repositories/dynamodb-appointment.repository';
@@ -36,6 +41,27 @@ export class UseCaseFactory {
   public static createGetAppointmentsByInsuredIdUseCase(): GetAppointmentsByInsuredIdUseCase {
     return new GetAppointmentsByInsuredIdUseCase(
       this.getAppointmentRepository()
+    );
+  }
+
+  /**
+   * Creates a ProcessAppointmentUseCase with all dependencies injected
+   */
+  public static createProcessAppointmentUseCase(): ProcessAppointmentUseCase {
+    return new ProcessAppointmentUseCase(
+      this.getAppointmentRepository(),
+      this.getEventBridgeAdapter(),
+      this.getScheduleRepository()
+    );
+  }
+
+  /**
+   * Creates a CompleteAppointmentUseCase with all dependencies injected
+   */
+  public static createCompleteAppointmentUseCase(): CompleteAppointmentUseCase {
+    return new CompleteAppointmentUseCase(
+      this.getAppointmentRepository(),
+      this.getEventBridgeAdapter()
     );
   }
 
