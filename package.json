@@ -15,7 +15,8 @@
     "remove": "serverless remove",
     "test": "pnpm --recursive run test",
     "test:coverage": "pnpm --recursive run test:coverage",
-    "test:integration": "pnpm --recursive run test:integration",
+    "test:integration": "jest --testPathPattern=test/integration --verbose",
+    "test:integration:all": "pnpm --recursive run test:integration && pnpm run test:integration",
     "test:unit": "pnpm --recursive run test:unit"
   },
   "workspaces": [
