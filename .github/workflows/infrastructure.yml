@@ -1,0 +1,125 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/infrastructure.yml'
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Deployment stage'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '18.x'
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        stage: [dev]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Install Serverless Framework
+      run: npm install -g serverless@3
+      
+    - name: Install dependencies
+      working-directory: infrastructure
+      run: |
+        npm init -y
+        npm install --save-dev serverless-prune-plugin
+        
+    - name: Validate infrastructure configuration
+      working-directory: infrastructure
+      run: |
+        echo "🔍 Validating Serverless configuration..."
+        serverless print --stage ${{ matrix.stage }}
+        
+    - name: Deploy Infrastructure Stack
+      working-directory: infrastructure
+      run: |
+        echo "🚀 Deploying infrastructure stack to ${{ matrix.stage }}..."
+        serverless deploy --stage ${{ matrix.stage }} --region ${{ env.AWS_REGION }} --verbose
+        
+    - name: Wait for RDS to be available
+      run: |
+        echo "⏳ Waiting for RDS instance to be available..."
+        aws rds wait db-instance-available --db-instance-identifier medical-appointments-db-${{ matrix.stage }}
+        echo "✅ RDS instance is now available!"
+        
+    - name: Setup database schema
+      run: |
+        echo "🗄️ Setting up database schema..."
+        
+        # Get RDS endpoint and credentials
+        RDS_ENDPOINT=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/rds/host" --query "Parameter.Value" --output text)
+        RDS_PASSWORD=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/rds/password" --with-decryption --query "Parameter.Value" --output text)
+        
+        # Install MySQL client
+        sudo apt-get update
+        sudo apt-get install -y mysql-client
+        
+        # Execute database schema
+        echo "Creating database schema..."
+        mysql -h $RDS_ENDPOINT -u admin -p$RDS_PASSWORD < infrastructure/scripts/create-database.sql
+        
+        # Execute seed data
+        echo "Inserting seed data..."
+        mysql -h $RDS_ENDPOINT -u admin -p$RDS_PASSWORD < infrastructure/scripts/seed-data.sql
+        
+        echo "✅ Database setup completed!"
+        
+    - name: Verify infrastructure deployment
+      run: |
+        echo "🧪 Verifying infrastructure deployment..."
+        
+        # Check if S3 bucket exists
+        BUCKET_NAME=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/deployment/bucket" --query "Parameter.Value" --output text)
+        aws s3 ls s3://$BUCKET_NAME
+        
+        # Check if RDS is accessible
+        RDS_ENDPOINT=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/rds/host" --query "Parameter.Value" --output text)
+        RDS_PASSWORD=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/rds/password" --with-decryption --query "Parameter.Value" --output text)
+        
+        mysql -h $RDS_ENDPOINT -u admin -p$RDS_PASSWORD -e "SELECT 'Database connection successful' as status;"
+        
+        echo "✅ Infrastructure verification completed!"
+        
+    - name: Create deployment summary
+      run: |
+        echo "📋 Deployment Summary for ${{ matrix.stage }}:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Resource | Status | Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|---------|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| RDS Instance | ✅ Deployed | medical-appointments-db-${{ matrix.stage }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| S3 Bucket | ✅ Deployed | $(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/deployment/bucket" --query "Parameter.Value" --output text) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Parameter Store | ✅ Configured | /medical-appointment/${{ matrix.stage }}/* |" >> $GITHUB_STEP_SUMMARY
+        echo "| Database Schema | ✅ Created | medical_appointments |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **Next Step**: Deploy the application stack using the application workflow." >> $GITHUB_STEP_SUMMARY

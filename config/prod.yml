@@ -1,10 +1,8 @@
 # Production environment configuration
-rds:
-  host: prod-medical-rds.cluster-xxxxx.us-east-1.rds.amazonaws.com
-  database: medical_appointments_prod
-  port: 3306
-  username: prod_user
-  password: prod_password_change_me
+stage: prod
+
+# RDS configuration will be handled by Parameter Store from infrastructure stack
+# No need to define RDS connection details here anymore
 
 api:
   throttling:

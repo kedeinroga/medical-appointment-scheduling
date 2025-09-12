@@ -1,0 +1,42 @@
+Outputs:
+  RDSEndpoint:
+    Description: RDS instance endpoint
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: ${self:service}-${self:provider.stage}-rds-endpoint
+
+  RDSPort:
+    Description: RDS instance port
+    Value: !GetAtt RDSInstance.Endpoint.Port
+    Export:
+      Name: ${self:service}-${self:provider.stage}-rds-port
+
+  DeploymentBucketName:
+    Description: S3 bucket for serverless deployments
+    Value: !Ref ServerlessDeploymentBucket
+    Export:
+      Name: ${self:service}-${self:provider.stage}-deployment-bucket
+
+  LambdaSecurityGroup:
+    Description: Security group for Lambda functions
+    Value: !Ref LambdaSecurityGroup
+    Export:
+      Name: ${self:service}-${self:provider.stage}-lambda-sg
+
+  RDSSecurityGroup:
+    Description: Security group for RDS instance
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: ${self:service}-${self:provider.stage}-rds-sg
+
+  DatabaseName:
+    Description: Database name
+    Value: medical_appointments
+    Export:
+      Name: ${self:service}-${self:provider.stage}-database-name
+
+  DatabaseUsername:
+    Description: Database username
+    Value: admin
+    Export:
+      Name: ${self:service}-${self:provider.stage}-database-username

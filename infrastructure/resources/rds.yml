@@ -1,0 +1,191 @@
+Resources:
+  # VPC Security Group for RDS
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Medical Appointment RDS instance
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+          Description: Allow MySQL access from Lambda functions
+      Tags:
+        - Key: Name
+          Value: medical-appointment-rds-sg-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # Security Group for Lambda functions
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Medical Appointment Lambda functions
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: medical-appointment-lambda-sg-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # DB Subnet Group
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Medical Appointment RDS
+      SubnetIds:
+        - !Ref RDSSubnet1
+        - !Ref RDSSubnet2
+      Tags:
+        - Key: Name
+          Value: medical-appointment-subnet-group-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # RDS Subnets
+  RDSSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DefaultVPC
+      CidrBlock: 172.31.80.0/24
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      Tags:
+        - Key: Name
+          Value: medical-appointment-subnet-1-${self:provider.stage}
+
+  RDSSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DefaultVPC
+      CidrBlock: 172.31.81.0/24
+      AvailabilityZone: !Sub "${AWS::Region}b"
+      Tags:
+        - Key: Name
+          Value: medical-appointment-subnet-2-${self:provider.stage}
+
+  # Default VPC (reference existing)
+  DefaultVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.31.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: medical-appointment-vpc-${self:provider.stage}
+
+  # RDS Parameter Group
+  RDSParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Family: mysql8.0
+      Description: Parameter group for Medical Appointment MySQL
+      Parameters:
+        innodb_buffer_pool_size: "{DBInstanceClassMemory*3/4}"
+        max_connections: 100
+        general_log: 0
+        slow_query_log: 1
+        long_query_time: 2
+      Tags:
+        - Key: Name
+          Value: medical-appointment-params-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # RDS Instance
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: ${self:provider.stage == 'prod' ? 'Snapshot' : 'Delete'}
+    Properties:
+      DBInstanceIdentifier: medical-appointments-db-${self:provider.stage}
+      DBInstanceClass: ${self:provider.stage == 'prod' ? 'db.t3.small' : 'db.t3.micro'}
+      Engine: mysql
+      EngineVersion: "8.0"
+      MasterUsername: admin
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageType: gp2
+      StorageEncrypted: true
+      
+      # Network Configuration
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      
+      # Parameter Group
+      DBParameterGroupName: !Ref RDSParameterGroup
+      
+      # Backup Configuration
+      BackupRetentionPeriod: ${self:provider.stage == 'prod' ? 7 : 1}
+      DeleteAutomatedBackups: ${self:provider.stage == 'prod' ? false : true}
+      PreferredBackupWindow: "03:00-04:00"
+      PreferredMaintenanceWindow: "sun:04:00-sun:05:00"
+      
+      # Monitoring
+      MonitoringInterval: ${self:provider.stage == 'prod' ? 60 : 0}
+      MonitoringRoleArn: ${self:provider.stage == 'prod' ? !GetAtt RDSEnhancedMonitoringRole.Arn : !Ref "AWS::NoValue"}
+      EnablePerformanceInsights: ${self:provider.stage == 'prod' ? true : false}
+      
+      # Multi-AZ for production
+      MultiAZ: ${self:provider.stage == 'prod' ? true : false}
+      
+      Tags:
+        - Key: Name
+          Value: medical-appointments-db-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # RDS Master Password Secret
+  RDSMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: medical-appointment-rds-${self:provider.stage}
+      Description: Master password for Medical Appointment RDS instance
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # Enhanced Monitoring Role (for production)
+  RDSEnhancedMonitoringRole:
+    Type: AWS::IAM::Role
+    Condition: IsProduction
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: monitoring.rds.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+# Conditions
+Conditions:
+  IsProduction: !Equals [${self:provider.stage}, 'prod']

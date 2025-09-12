@@ -11,6 +11,20 @@ provider:
   timeout: 30
   logRetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays, 7}
   
+  # Use deployment bucket from infrastructure stack
+  deploymentBucket:
+    name: ${ssm:/medical-appointment/${self:provider.stage}/deployment/bucket}
+    serverSideEncryption: AES256
+    
+  # Use VPC configuration for RDS access
+  vpc:
+    securityGroupIds:
+      - ${ssm:/medical-appointment/${self:provider.stage}/lambda/security-group}
+    subnetIds:
+      # These would be created by infrastructure stack or use default VPC subnets
+      - subnet-12345678  # This should be parameterized in a real deployment
+      - subnet-87654321  # This should be parameterized in a real deployment
+  
   environment:
     STAGE: ${self:provider.stage}
     AWS_REGION: ${self:provider.region}
@@ -20,11 +34,11 @@ provider:
     APPOINTMENTS_PE_QUEUE_URL: !Ref AppointmentsPEQueue
     APPOINTMENTS_CL_QUEUE_URL: !Ref AppointmentsCLQueue
     EVENTBRIDGE_BUS_NAME: !Ref MedicalAppointmentsEventBus
-    RDS_HOST: ${file(config/${self:provider.stage}.yml):rds.host}
-    RDS_DATABASE: ${file(config/${self:provider.stage}.yml):rds.database}
-    RDS_PORT: ${file(config/${self:provider.stage}.yml):rds.port, 3306}
-    RDS_USERNAME: ${file(config/${self:provider.stage}.yml):rds.username}
-    RDS_PASSWORD: ${file(config/${self:provider.stage}.yml):rds.password}
+    RDS_HOST: ${ssm:/medical-appointment/${self:provider.stage}/rds/host}
+    RDS_DATABASE: ${ssm:/medical-appointment/${self:provider.stage}/rds/database}
+    RDS_PORT: ${ssm:/medical-appointment/${self:provider.stage}/rds/port}
+    RDS_USERNAME: ${ssm:/medical-appointment/${self:provider.stage}/rds/username}
+    RDS_PASSWORD: ${ssm:/medical-appointment/${self:provider.stage}/rds/password}
 
   iam:
     role:

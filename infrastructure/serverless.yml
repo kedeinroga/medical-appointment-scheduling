@@ -1,0 +1,44 @@
+service: medical-appointment-infrastructure
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_REGION: ${self:provider.region}
+
+plugins:
+  - serverless-prune-plugin
+
+custom:
+  prune:
+    automatic: true
+    number: 3
+
+  # Stack outputs que serán usados por la aplicación
+  stackOutputs:
+    RDSEndpoint: !GetAtt RDSInstance.Endpoint.Address
+    RDSPort: !GetAtt RDSInstance.Endpoint.Port
+    DeploymentBucketName: !Ref ServerlessDeploymentBucket
+    DatabaseName: medical_appointments
+    DatabaseUsername: admin
+
+# Infrastructure Resources
+resources:
+  - ${file(resources/s3.yml)}
+  - ${file(resources/rds.yml)}
+  - ${file(resources/parameter-store.yml)}
+  - ${file(resources/outputs.yml)}
+
+# No functions in infrastructure stack - only resources
+functions: {}
+
+# Package configuration
+package:
+  patterns:
+    - "!**"
+    - "scripts/**"
