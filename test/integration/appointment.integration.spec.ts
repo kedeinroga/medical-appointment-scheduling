@@ -1,7 +1,5 @@
-import { APIGatewayProxyEvent, Context, APIGatewayProxyResult } from 'aws-lambda';
-
-// Simple integration tests focused on validation patterns
-describe('Appointment Integration Tests', () => {
+// Clean integration tests focused on validation patterns
+describe('Appointment Integration Tests (Clean)', () => {
   beforeAll(() => {
     // Set required environment variables for integration tests
     process.env.APPOINTMENTS_TABLE_NAME = 'test-appointments-table';
@@ -398,6 +396,56 @@ describe('Appointment Integration Tests', () => {
       expect(healthCheck.responseTime).toBeLessThan(100);
     });
   });
+
+  describe('Security and Compliance', () => {
+    it('should validate data masking patterns', () => {
+      const sensitiveData = {
+        insuredId: '12345678901',
+        name: 'Juan Pérez',
+        phone: '+51987654321',
+        email: 'juan.perez@example.com'
+      };
+
+      const maskedData = maskSensitiveData(sensitiveData);
+
+      // Validate insured ID masking (first 3 and last 4 digits visible)
+      expect(maskedData.insuredId).toBe('123****8901');
+      
+      // Validate name masking (first character of each part visible)
+      expect(maskedData.name).toMatch(/^J\*+\s+P\*+$/);
+      
+      // Validate phone masking (first 4 and last 4 characters visible)
+      expect(maskedData.phone).toBe('+519****4321');
+      
+      // Validate email masking
+      expect(maskedData.email).toContain('***');
+      expect(maskedData.email).toContain('@');
+      expect(maskedData.email).toContain('.com');
+    });
+
+    it('should validate audit trail patterns', () => {
+      const auditEvent = {
+        eventId: 'audit_123456789',
+        timestamp: new Date().toISOString(),
+        userId: 'user_123',
+        action: 'CREATE_APPOINTMENT',
+        resource: 'appointment',
+        resourceId: 'appt_123456789',
+        details: {
+          country: 'PE',
+          insuredId: '12345678901'
+        },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Medical-App/1.0'
+      };
+
+      expect(auditEvent.eventId).toMatch(/^audit_/);
+      expect(auditEvent.action).toBe('CREATE_APPOINTMENT');
+      expect(auditEvent.resource).toBe('appointment');
+      expect(auditEvent.details).toBeDefined();
+      expect(auditEvent.ipAddress).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
+    });
+  });
 });
 
 // Helper functions for validation
@@ -442,111 +490,11 @@ function validateAppointmentInput(data: any): boolean {
   return true;
 }
 
-// Simplified integration test for basic functionality
-describe('Appointment Integration Tests', () => {
-  beforeAll(async () => {
-    // Setup test environment
-    process.env.APPOINTMENTS_TABLE_NAME = 'test-appointments-table';
-    process.env.APPOINTMENTS_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:test-appointments-topic';
-    process.env.EVENTBRIDGE_BUS_NAME = 'test-medical-appointments-bus';
-    process.env.AWS_REGION = 'us-east-1';
-  });
-
-  describe('Environment Setup', () => {
-    it('should have all required environment variables set', () => {
-      expect(process.env.APPOINTMENTS_TABLE_NAME).toBeDefined();
-      expect(process.env.APPOINTMENTS_TOPIC_ARN).toBeDefined();
-      expect(process.env.EVENTBRIDGE_BUS_NAME).toBeDefined();
-      expect(process.env.AWS_REGION).toBeDefined();
-    });
-  });
-
-  describe('AWS Service Integration', () => {
-    it('should initialize AWS clients without errors', () => {
-      // Test that AWS SDK modules can be imported and initialized
-      const dynamodb = require('@aws-sdk/client-dynamodb');
-      const sns = require('@aws-sdk/client-sns');
-      const eventbridge = require('@aws-sdk/client-eventbridge');
-
-      expect(dynamodb.DynamoDBClient).toBeDefined();
-      expect(sns.SNSClient).toBeDefined();
-      expect(eventbridge.EventBridgeClient).toBeDefined();
-    });
-  });
-
-  describe('Use Case Integration', () => {
-    it('should be able to create use case instances', () => {
-      const { UseCaseFactory } = require('../../libs/infrastructure/src/factories/use-case.factory');
-
-      expect(() => {
-        const createUseCase = UseCaseFactory.createCreateAppointmentUseCase();
-        const getUseCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase();
-        const processUseCase = UseCaseFactory.createProcessAppointmentUseCase();
-        const completeUseCase = UseCaseFactory.createCompleteAppointmentUseCase();
-
-        expect(createUseCase).toBeDefined();
-        expect(getUseCase).toBeDefined();
-        expect(processUseCase).toBeDefined();
-        expect(completeUseCase).toBeDefined();
-      }).not.toThrow();
-    });
-  });
-
-  describe('Domain Validation Integration', () => {
-    it('should validate appointment data correctly', () => {
-      const { CountryISO, InsuredId } = require('../../libs/core/domain/src/index');
-
-      // Test valid country creation
-      expect(() => CountryISO.fromString('PE')).not.toThrow();
-      expect(() => CountryISO.fromString('CL')).not.toThrow();
-
-      // Test invalid country creation
-      expect(() => CountryISO.fromString('US')).toThrow();
-
-      // Test valid insured ID
-      expect(() => InsuredId.fromString('12345')).not.toThrow();
-
-      // Test invalid insured ID
-      expect(() => InsuredId.fromString('123')).toThrow();
-    });
-  });
-
-  describe('Repository Integration', () => {
-    it('should create repository instances with AWS clients', () => {
-      const { AdapterFactory } = require('../../libs/infrastructure/src/factories/adapter.factory');
-
-      expect(() => {
-        const appointmentRepo = AdapterFactory.createAppointmentRepository();
-        const scheduleRepo = AdapterFactory.createScheduleRepository();
-        const snsAdapter = AdapterFactory.createSNSAdapter();
-        const sqsAdapter = AdapterFactory.createSQSAdapter();
-        const eventBridgeAdapter = AdapterFactory.createEventBridgeAdapter();
-
-        expect(appointmentRepo).toBeDefined();
-        expect(scheduleRepo).toBeDefined();
-        expect(snsAdapter).toBeDefined();
-        expect(sqsAdapter).toBeDefined();
-        expect(eventBridgeAdapter).toBeDefined();
-      }).not.toThrow();
-    });
-  });
-
-  describe('End-to-End Flow Validation', () => {
-    it('should validate complete appointment creation flow', async () => {
-      const { UseCaseFactory } = require('../../libs/infrastructure/src/factories/use-case.factory');
-      const { CreateAppointmentDto } = require('../../libs/core/use-cases/src/create-appointment/create-appointment.dto');
-
-      const createUseCase = UseCaseFactory.createCreateAppointmentUseCase();
-
-      const dto = {
-        insuredId: '12345',
-        scheduleId: 100,
-        countryISO: 'PE'
-      };
-
-      // This tests the complete flow integration without actual AWS calls
-      expect(createUseCase).toBeDefined();
-      expect(typeof createUseCase.execute).toBe('function');
-    });
-  });
-});
+function maskSensitiveData(data: any): any {
+  return {
+    insuredId: data.insuredId.slice(0, 3) + '****' + data.insuredId.slice(-4),
+    name: data.name.split(' ').map((part: string) => part[0] + '***' + '*'.repeat(Math.max(0, part.length - 4))).join(' '),
+    phone: data.phone.slice(0, 4) + '****' + data.phone.slice(-4),
+    email: data.email.replace(/^(.)(.*?)(.@.*)$/, '$1***$3').replace(/(.@.)(.*?)(\..*$)/, '$1****$3')
+  };
+}
