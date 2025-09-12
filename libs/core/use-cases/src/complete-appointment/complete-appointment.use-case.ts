@@ -1,8 +1,15 @@
-import { AppointmentCompletedEvent, AppointmentId, CountryISO, IAppointmentRepository } from '@medical-appointment/core-domain';
+import { 
+  Appointment, 
+  AppointmentCompletedEvent, 
+  AppointmentId, 
+  CountryISO, 
+  IAppointmentRepository, 
+  IEventBus,
+  IScheduleRepository
+} from '@medical-appointment/core-domain';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { maskInsuredId } from '@medical-appointment/shared';
 
-import { IEventBus } from '../ports/event-bus.port';
 import { CompleteAppointmentDto, CompleteAppointmentResponseDto } from './complete-appointment.dto';
 
 const logger = new Logger({

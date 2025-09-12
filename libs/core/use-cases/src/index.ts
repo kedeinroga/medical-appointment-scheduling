@@ -17,7 +17,4 @@ export * from './process-appointment/process-appointment.use-case';
 export * from './complete-appointment/complete-appointment.dto';
 export * from './complete-appointment/complete-appointment.use-case';
 
-// Ports
-export * from './ports/event-bus.port';
-
 export const USE_CASES_LAYER_VERSION = '1.0.0';

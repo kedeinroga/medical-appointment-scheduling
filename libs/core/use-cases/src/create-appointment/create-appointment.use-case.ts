@@ -4,6 +4,7 @@ import {
   AppointmentId, 
   CountryISO, 
   IAppointmentRepository, 
+  IEventBus,
   IScheduleRepository, 
   Insured, 
   InsuredId 
@@ -11,7 +12,6 @@ import {
 import { Logger } from '@aws-lambda-powertools/logger';
 import { maskInsuredId } from '@medical-appointment/shared';
 
-import { IEventBus } from '../ports/event-bus.port';
 import { CreateAppointmentDto, CreateAppointmentResponseDto } from './create-appointment.dto';
 
 const logger = new Logger({
