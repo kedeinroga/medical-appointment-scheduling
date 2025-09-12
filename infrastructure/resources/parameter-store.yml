@@ -1,7 +1,20 @@
 Resources:
-  # RDS Connection Parameters
+  # Simple parameters first (no dependencies)
+  RDSDatabaseParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /medical-appointment/${self:provider.stage}/rds/database
+      Type: String
+      Value: medical_appointments
+      Description: Database name for Medical Appointment
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
+
+  # RDS Connection Parameters (with explicit dependencies)
   RDSHostParameter:
     Type: AWS::SSM::Parameter
+    DependsOn: RDSInstance
     Properties:
       Name: /medical-appointment/${self:provider.stage}/rds/host
       Type: String
@@ -13,22 +26,12 @@ Resources:
 
   RDSPortParameter:
     Type: AWS::SSM::Parameter
+    DependsOn: RDSInstance
     Properties:
       Name: /medical-appointment/${self:provider.stage}/rds/port
       Type: String
       Value: !GetAtt RDSInstance.Endpoint.Port
       Description: RDS port for Medical Appointment DB
-      Tags:
-        Service: medical-appointment-scheduling
-        Stage: ${self:provider.stage}
-
-  RDSDatabaseParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /medical-appointment/${self:provider.stage}/rds/database
-      Type: String
-      Value: medical_appointments
-      Description: Database name for Medical Appointment
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
@@ -46,6 +49,7 @@ Resources:
 
   RDSPasswordParameter:
     Type: AWS::SSM::Parameter
+    DependsOn: RDSMasterSecret
     Properties:
       Name: /medical-appointment/${self:provider.stage}/rds/password
       Type: String
@@ -58,6 +62,7 @@ Resources:
   # Deployment Bucket Parameter
   DeploymentBucketParameter:
     Type: AWS::SSM::Parameter
+    DependsOn: ServerlessDeploymentBucket
     Properties:
       Name: /medical-appointment/${self:provider.stage}/deployment/bucket
       Type: String
