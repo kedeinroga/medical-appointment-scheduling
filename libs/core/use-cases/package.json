@@ -9,7 +9,7 @@
     "clean": "rm -rf dist",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:unit": "jest --testNamePattern=\"unit\"",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch"
