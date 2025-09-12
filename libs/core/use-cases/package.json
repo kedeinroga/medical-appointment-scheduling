@@ -1,0 +1,22 @@
+{
+  "name": "@medical-appointment/core-use-cases",
+  "version": "1.0.0",
+  "description": "Core use cases layer for medical appointment scheduling",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "jest",
+    "test:unit": "jest --testNamePattern=\"unit\"",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@medical-appointment/core-domain": "workspace:*",
+    "@medical-appointment/shared": "workspace:*",
+    "zod": "^3.23.8"
+  }
+}

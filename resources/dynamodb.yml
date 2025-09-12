@@ -1,0 +1,82 @@
+# DynamoDB Tables Infrastructure as Code
+Resources:
+  # Main appointments table
+  AppointmentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: medical-appointment-scheduling-appointments-${self:provider.stage}
+      BillingMode: ${file(config/${self:provider.stage}.yml):performance.dynamodb.billingMode}
+      AttributeDefinitions:
+        - AttributeName: appointmentId
+          AttributeType: S
+        - AttributeName: insuredId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+        - AttributeName: countryISO
+          AttributeType: S
+      KeySchema:
+        - AttributeName: appointmentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: insuredId-createdAt-index
+          KeySchema:
+            - AttributeName: insuredId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: status-createdAt-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: countryISO-createdAt-index
+          KeySchema:
+            - AttributeName: countryISO
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+Outputs:
+  AppointmentsTableName:
+    Description: "Name of the Appointments DynamoDB table"
+    Value: !Ref AppointmentsTable
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-table-name
+
+  AppointmentsTableArn:
+    Description: "ARN of the Appointments DynamoDB table"
+    Value: !GetAtt AppointmentsTable.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-table-arn
+
+  AppointmentsTableStreamArn:
+    Description: "Stream ARN of the Appointments DynamoDB table"
+    Value: !GetAtt AppointmentsTable.StreamArn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-table-stream-arn

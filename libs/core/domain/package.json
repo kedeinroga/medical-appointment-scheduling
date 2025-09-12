@@ -1,0 +1,23 @@
+{
+  "name": "@medical-appointment/core-domain",
+  "version": "1.0.0",
+  "description": "Core domain layer for medical appointment scheduling",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "jest",
+    "test:unit": "jest --testNamePattern=\"unit\"",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
+  }
+}

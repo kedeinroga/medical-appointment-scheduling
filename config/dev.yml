@@ -1,0 +1,41 @@
+# Development environment configuration
+rds:
+  host: dev-medical-rds.cluster-xxxxx.us-east-1.rds.amazonaws.com
+  database: medical_appointments_dev
+  port: 3306
+  username: dev_user
+  password: ${ssm:/medical-appointment-scheduling/dev/rds/password}
+
+api:
+  throttling:
+    burstLimit: 1000
+    rateLimit: 500
+  caching:
+    enabled: false
+
+monitoring:
+  alarms:
+    enabled: true
+    errorThreshold: 10
+    durationThreshold: 10000
+
+logging:
+  level: DEBUG
+  retentionDays: 7
+  sampling: 1.0
+
+security:
+  encryption:
+    kmsKeyId: alias/aws/dynamodb
+  cors:
+    allowOrigin: "*"
+    allowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+    allowMethods: "GET,POST,OPTIONS"
+
+performance:
+  dynamodb:
+    billingMode: PAY_PER_REQUEST
+  lambda:
+    memorySize: 512
+    timeout: 30
+    reservedConcurrency: 10

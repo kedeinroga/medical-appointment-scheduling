@@ -1,0 +1,162 @@
+service: medical-appointment-scheduling
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  architecture: arm64
+  memorySize: 512
+  timeout: 30
+  logRetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays, 7}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_REGION: ${self:provider.region}
+    LOG_LEVEL: ${file(config/${self:provider.stage}.yml):logging.level, 'INFO'}
+    APPOINTMENTS_TABLE_NAME: !Ref AppointmentsTable
+    APPOINTMENTS_TOPIC_ARN: !Ref AppointmentsTopic
+    APPOINTMENTS_PE_QUEUE_URL: !Ref AppointmentsPEQueue
+    APPOINTMENTS_CL_QUEUE_URL: !Ref AppointmentsCLQueue
+    EVENTBRIDGE_BUS_NAME: !Ref MedicalAppointmentsEventBus
+    RDS_HOST: ${file(config/${self:provider.stage}.yml):rds.host}
+    RDS_DATABASE: ${file(config/${self:provider.stage}.yml):rds.database}
+    RDS_PORT: ${file(config/${self:provider.stage}.yml):rds.port, 3306}
+    RDS_USERNAME: ${file(config/${self:provider.stage}.yml):rds.username}
+    RDS_PASSWORD: ${file(config/${self:provider.stage}.yml):rds.password}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - !GetAtt AppointmentsTable.Arn
+            - !Sub "${AppointmentsTable.Arn}/index/*"
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource:
+            - !Ref AppointmentsTopic
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - !GetAtt AppointmentsPEQueue.Arn
+            - !GetAtt AppointmentsCLQueue.Arn
+            - !GetAtt AppointmentsCompletionQueue.Arn
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource:
+            - !GetAtt MedicalAppointmentsEventBus.Arn
+        - Effect: Allow
+          Action:
+            - rds-data:ExecuteStatement
+            - rds-data:BatchExecuteStatement
+          Resource: "*"
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline
+  - serverless-prune-plugin
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    exclude:
+      - aws-sdk
+    target: node18
+    define:
+      require.resolve: undefined
+    platform: node
+    concurrency: 10
+
+  prune:
+    automatic: true
+    number: 3
+
+  serverless-offline:
+    httpPort: 3000
+    babelOptions:
+      presets: ["env"]
+
+# Functions will be defined in separate files and imported
+functions:
+  # Main appointment Lambda - handles API Gateway requests
+  appointment:
+    handler: functions/appointment/handler.main
+    description: "Main appointment service for creating and retrieving appointments"
+    events:
+      - http:
+          path: appointments
+          method: post
+          cors: true
+      - http:
+          path: appointments/{insuredId}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                insuredId: true
+
+  # Peru appointment processor
+  appointment-pe:
+    handler: functions/appointment-pe/handler.main
+    description: "Process appointments for Peru (PE) country"
+    events:
+      - sqs:
+          arn: !GetAtt AppointmentsPEQueue.Arn
+          batchSize: 10
+
+  # Chile appointment processor  
+  appointment-cl:
+    handler: functions/appointment-cl/handler.main
+    description: "Process appointments for Chile (CL) country"
+    events:
+      - sqs:
+          arn: !GetAtt AppointmentsCLQueue.Arn
+          batchSize: 10
+
+  # Appointment completion processor
+  appointment-completion:
+    handler: functions/appointment-completion/handler.main
+    description: "Complete appointment processing and update status"
+    events:
+      - sqs:
+          arn: !GetAtt AppointmentsCompletionQueue.Arn
+          batchSize: 10
+
+# Infrastructure as Code - Import resource definitions
+resources:
+  - ${file(resources/dynamodb.yml)}
+  - ${file(resources/sns.yml)}
+  - ${file(resources/sqs.yml)}
+  - ${file(resources/eventbridge.yml)}
+  - ${file(resources/iam.yml)}
+
+# Package configuration
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!.git/**"
+    - "!.vscode/**"
+    - "!coverage/**"
+    - "!.nyc_output/**"
+    - "!.eslintrc.js"
+    - "!.prettierrc"
+    - "!jest.config.js"
+    - "!tsconfig*.json"

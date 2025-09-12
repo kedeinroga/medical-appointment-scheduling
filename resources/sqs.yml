@@ -1,0 +1,211 @@
+# SQS Queues Infrastructure as Code
+Resources:
+  # Dead Letter Queue for Peru appointments
+  AppointmentsPEDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-pe-dlq-${self:provider.stage}
+      MessageRetentionPeriod: 1209600 # 14 days
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: PE
+        - Key: Purpose
+          Value: dead-letter-queue
+
+  # Peru appointments processing queue
+  AppointmentsPEQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-pe-${self:provider.stage}
+      VisibilityTimeoutSeconds: 180 # 3 times lambda timeout
+      MessageRetentionPeriod: 1209600 # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AppointmentsPEDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: PE
+        - Key: Purpose
+          Value: appointment-processing
+
+  # Dead Letter Queue for Chile appointments
+  AppointmentsCLDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-cl-dlq-${self:provider.stage}
+      MessageRetentionPeriod: 1209600 # 14 days
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: CL
+        - Key: Purpose
+          Value: dead-letter-queue
+
+  # Chile appointments processing queue
+  AppointmentsCLQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-cl-${self:provider.stage}
+      VisibilityTimeoutSeconds: 180 # 3 times lambda timeout
+      MessageRetentionPeriod: 1209600 # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AppointmentsCLDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: CL
+        - Key: Purpose
+          Value: appointment-processing
+
+  # Dead Letter Queue for appointment completion
+  AppointmentsCompletionDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-completion-dlq-${self:provider.stage}
+      MessageRetentionPeriod: 1209600 # 14 days
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Purpose
+          Value: completion-dead-letter-queue
+
+  # Appointment completion queue (receives from EventBridge)
+  AppointmentsCompletionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-completion-${self:provider.stage}
+      VisibilityTimeoutSeconds: 180 # 3 times lambda timeout
+      MessageRetentionPeriod: 1209600 # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AppointmentsCompletionDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Purpose
+          Value: appointment-completion
+
+  # Queue Policy to allow SNS to send messages to PE queue
+  AppointmentsPEQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentsPEQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSNSToSendMessage
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AppointmentsPEQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Ref AppointmentsTopic
+
+  # Queue Policy to allow SNS to send messages to CL queue
+  AppointmentsCLQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentsCLQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSNSToSendMessage
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AppointmentsCLQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Ref AppointmentsTopic
+
+  # Queue Policy to allow EventBridge to send messages to completion queue
+  AppointmentsCompletionQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentsCompletionQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEventBridgeToSendMessage
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AppointmentsCompletionQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !GetAtt MedicalAppointmentsEventBus.Arn
+
+Outputs:
+  AppointmentsPEQueueUrl:
+    Description: "URL of the Peru Appointments SQS Queue"
+    Value: !Ref AppointmentsPEQueue
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-queue-url
+
+  AppointmentsPEQueueArn:
+    Description: "ARN of the Peru Appointments SQS Queue"
+    Value: !GetAtt AppointmentsPEQueue.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-queue-arn
+
+  AppointmentsCLQueueUrl:
+    Description: "URL of the Chile Appointments SQS Queue"
+    Value: !Ref AppointmentsCLQueue
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-queue-url
+
+  AppointmentsCLQueueArn:
+    Description: "ARN of the Chile Appointments SQS Queue"
+    Value: !GetAtt AppointmentsCLQueue.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-queue-arn
+
+  AppointmentsCompletionQueueUrl:
+    Description: "URL of the Appointments Completion SQS Queue"
+    Value: !Ref AppointmentsCompletionQueue
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-completion-queue-url
+
+  AppointmentsCompletionQueueArn:
+    Description: "ARN of the Appointments Completion SQS Queue"
+    Value: !GetAtt AppointmentsCompletionQueue.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-completion-queue-arn

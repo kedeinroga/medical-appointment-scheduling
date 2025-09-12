@@ -1,0 +1,5 @@
+packages:
+  - 'functions/*'
+  - 'libs/core/*'
+  - 'libs/shared'
+  - 'libs/infrastructure'

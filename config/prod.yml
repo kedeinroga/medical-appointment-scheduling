@@ -1,0 +1,42 @@
+# Production environment configuration
+rds:
+  host: prod-medical-rds.cluster-xxxxx.us-east-1.rds.amazonaws.com
+  database: medical_appointments_prod
+  port: 3306
+  username: prod_user
+  password: ${ssm:/medical-appointment-scheduling/prod/rds/password}
+
+api:
+  throttling:
+    burstLimit: 5000
+    rateLimit: 2000
+  caching:
+    enabled: true
+    ttlInSeconds: 300
+
+monitoring:
+  alarms:
+    enabled: true
+    errorThreshold: 5
+    durationThreshold: 5000
+
+logging:
+  level: INFO
+  retentionDays: 30
+  sampling: 0.1
+
+security:
+  encryption:
+    kmsKeyId: alias/medical-appointment-scheduling-prod
+  cors:
+    allowOrigin: "https://medical-appointments.example.com"
+    allowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+    allowMethods: "GET,POST,OPTIONS"
+
+performance:
+  dynamodb:
+    billingMode: PAY_PER_REQUEST
+  lambda:
+    memorySize: 1024
+    timeout: 30
+    reservedConcurrency: 100

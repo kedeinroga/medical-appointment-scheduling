@@ -1,0 +1,37 @@
+{
+  "name": "@medical-appointment/infrastructure",
+  "version": "1.0.0",
+  "description": "Infrastructure layer for medical appointment scheduling",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "jest",
+    "test:unit": "jest --testNamePattern=\"unit\"",
+    "test:integration": "jest --testNamePattern=\"integration\"",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@medical-appointment/core-domain": "workspace:*",
+    "@medical-appointment/core-use-cases": "workspace:*",
+    "@medical-appointment/shared": "workspace:*",
+    "@aws-lambda-powertools/logger": "^2.7.0",
+    "@aws-lambda-powertools/metrics": "^2.7.0",
+    "@aws-lambda-powertools/tracer": "^2.7.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-eventbridge": "^3.600.0",
+    "@aws-sdk/client-rds": "^3.600.0",
+    "@aws-sdk/client-sns": "^3.600.0",
+    "@aws-sdk/client-sqs": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "mysql2": "^3.10.1",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
+  }
+}

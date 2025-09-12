@@ -1,0 +1,127 @@
+# EventBridge Infrastructure as Code
+Resources:
+  # Custom EventBridge Bus for medical appointments
+  MedicalAppointmentsEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: medical-appointment-scheduling-${self:provider.stage}
+      Description: "Custom event bus for medical appointment processing events"
+      KmsKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # Rule for Peru appointment processed events
+  AppointmentProcessedPERule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: medical-appointment-scheduling-appointment-processed-pe-${self:provider.stage}
+      Description: "Rule to capture appointment processed events from Peru"
+      EventBusName: !Ref MedicalAppointmentsEventBus
+      EventPattern:
+        source:
+          - "medical-appointment-scheduling.appointment-processor"
+        detail-type:
+          - "Appointment Processed"
+        detail:
+          countryISO:
+            - "PE"
+          status:
+            - "processed"
+      Targets:
+        - Arn: !GetAtt AppointmentsCompletionQueue.Arn
+          Id: "AppointmentProcessedPETarget"
+          SqsParameters:
+            MessageGroupId: "appointment-completion"
+
+  # Rule for Chile appointment processed events
+  AppointmentProcessedCLRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: medical-appointment-scheduling-appointment-processed-cl-${self:provider.stage}
+      Description: "Rule to capture appointment processed events from Chile"
+      EventBusName: !Ref MedicalAppointmentsEventBus
+      EventPattern:
+        source:
+          - "medical-appointment-scheduling.appointment-processor"
+        detail-type:
+          - "Appointment Processed"
+        detail:
+          countryISO:
+            - "CL"
+          status:
+            - "processed"
+      Targets:
+        - Arn: !GetAtt AppointmentsCompletionQueue.Arn
+          Id: "AppointmentProcessedCLTarget"
+          SqsParameters:
+            MessageGroupId: "appointment-completion"
+
+  # Rule for appointment processing errors
+  AppointmentProcessingErrorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: medical-appointment-scheduling-appointment-error-${self:provider.stage}
+      Description: "Rule to capture appointment processing errors"
+      EventBusName: !Ref MedicalAppointmentsEventBus
+      EventPattern:
+        source:
+          - "medical-appointment-scheduling.appointment-processor"
+        detail-type:
+          - "Appointment Processing Error"
+        detail:
+          status:
+            - "error"
+      Targets:
+        - Arn: !GetAtt AppointmentsCompletionQueue.Arn
+          Id: "AppointmentProcessingErrorTarget"
+          SqsParameters:
+            MessageGroupId: "appointment-completion"
+
+  # IAM Role for EventBridge to send messages to SQS
+  EventBridgeExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: medical-appointment-scheduling-eventbridge-role-${self:provider.stage}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EventBridgeToSQSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource:
+                  - !GetAtt AppointmentsCompletionQueue.Arn
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource:
+                  - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}"
+
+Outputs:
+  MedicalAppointmentsEventBusName:
+    Description: "Name of the Medical Appointments EventBridge Bus"
+    Value: !Ref MedicalAppointmentsEventBus
+    Export:
+      Name: ${self:service}-${self:provider.stage}-event-bus-name
+
+  MedicalAppointmentsEventBusArn:
+    Description: "ARN of the Medical Appointments EventBridge Bus"
+    Value: !GetAtt MedicalAppointmentsEventBus.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-event-bus-arn

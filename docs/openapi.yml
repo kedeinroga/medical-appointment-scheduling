@@ -1,0 +1,432 @@
+openapi: 3.0.3
+info:
+  title: Medical Appointment Scheduling API
+  description: |
+    A robust backend API for scheduling medical appointments using AWS serverless architecture.
+    
+    ## Overview
+    This API handles medical appointment scheduling for multiple countries (Peru and Chile) 
+    using an event-driven architecture. The system processes appointment requests asynchronously 
+    and maintains data consistency across different regional databases.
+    
+    ## Business Flow
+    1. **Request Reception**: Create appointment (status: "pending")
+    2. **Distribution**: Route to country-specific processors
+    3. **Processing**: Store in country-specific database
+    4. **Completion**: Update status to "completed"
+    
+  version: 1.0.0
+  contact:
+    name: Medical Appointment API Support
+    email: support@medical-appointments.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api-dev.medical-appointments.com
+    description: Development server
+  - url: https://api.medical-appointments.com
+    description: Production server
+
+tags:
+  - name: appointments
+    description: Medical appointment operations
+    externalDocs:
+      description: Find out more
+      url: https://docs.medical-appointments.com
+
+paths:
+  /appointments:
+    post:
+      tags:
+        - appointments
+      summary: Create a new medical appointment
+      description: |
+        Creates a new medical appointment request. The appointment will be processed 
+        asynchronously and the initial status will be "pending".
+      operationId: createAppointment
+      requestBody:
+        description: Appointment data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentRequest'
+            examples:
+              peru_appointment:
+                summary: Peru appointment example
+                value:
+                  insuredId: "00123"
+                  scheduleId: 100
+                  countryISO: "PE"
+              chile_appointment:
+                summary: Chile appointment example
+                value:
+                  insuredId: "00456"
+                  scheduleId: 200
+                  countryISO: "CL"
+      responses:
+        '201':
+          description: Appointment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAppointmentResponse'
+              examples:
+                success_response:
+                  summary: Successful creation
+                  value:
+                    appointmentId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "pending"
+                    message: "Appointment creation in progress"
+                    insuredId: "00123"
+                    scheduleId: 100
+                    countryISO: "PE"
+                    createdAt: "2024-09-11T10:00:00Z"
+        '400':
+          description: Bad request - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_country:
+                  summary: Invalid country code
+                  value:
+                    error: "VALIDATION_ERROR"
+                    message: "Country XX is not supported. Only PE and CL are allowed."
+                    details:
+                      field: "countryISO"
+                      value: "XX"
+                invalid_insured_id:
+                  summary: Invalid insured ID
+                  value:
+                    error: "VALIDATION_ERROR"
+                    message: "Invalid insured ID: 123. Must be exactly 5 digits."
+                    details:
+                      field: "insuredId"
+                      value: "123"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /appointments/{insuredId}:
+    get:
+      tags:
+        - appointments
+      summary: Get appointments by insured ID
+      description: |
+        Retrieves all appointments for a specific insured person.
+        Results are sorted by creation date (newest first).
+      operationId: getAppointmentsByInsuredId
+      parameters:
+        - name: insuredId
+          in: path
+          description: The insured person's ID (5 digits)
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9]{5}$'
+            example: "00123"
+        - name: status
+          in: query
+          description: Filter by appointment status
+          required: false
+          schema:
+            type: string
+            enum: [pending, processed, completed]
+            example: "completed"
+        - name: limit
+          in: query
+          description: Maximum number of appointments to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 10
+        - name: offset
+          in: query
+          description: Number of appointments to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            example: 0
+      responses:
+        '200':
+          description: Appointments retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAppointmentsResponse'
+              examples:
+                success_response:
+                  summary: Successful retrieval
+                  value:
+                    appointments:
+                      - appointmentId: "550e8400-e29b-41d4-a716-446655440000"
+                        insuredId: "00123"
+                        scheduleId: 100
+                        countryISO: "PE"
+                        status: "completed"
+                        createdAt: "2024-09-11T10:00:00Z"
+                        updatedAt: "2024-09-11T10:05:00Z"
+                      - appointmentId: "550e8400-e29b-41d4-a716-446655440001"
+                        insuredId: "00123"
+                        scheduleId: 150
+                        countryISO: "CL"
+                        status: "pending"
+                        createdAt: "2024-09-11T09:30:00Z"
+                        updatedAt: "2024-09-11T09:30:00Z"
+                    total: 2
+                    pagination:
+                      limit: 20
+                      offset: 0
+                      hasMore: false
+                empty_response:
+                  summary: No appointments found
+                  value:
+                    appointments: []
+                    total: 0
+                    pagination:
+                      limit: 20
+                      offset: 0
+                      hasMore: false
+        '400':
+          description: Bad request - Invalid insured ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_format:
+                  summary: Invalid insured ID format
+                  value:
+                    error: "VALIDATION_ERROR"
+                    message: "Invalid insured ID format. Must be exactly 5 digits."
+                    details:
+                      field: "insuredId"
+                      value: "12345A"
+        '404':
+          description: Insured person not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateAppointmentRequest:
+      type: object
+      required:
+        - insuredId
+        - scheduleId
+        - countryISO
+      properties:
+        insuredId:
+          type: string
+          pattern: '^[0-9]{5}$'
+          description: The insured person's ID (exactly 5 digits, can include leading zeros)
+          example: "00123"
+        scheduleId:
+          type: integer
+          minimum: 1
+          description: The schedule identifier for the appointment slot
+          example: 100
+        countryISO:
+          type: string
+          enum: [PE, CL]
+          description: The country ISO code (PE for Peru, CL for Chile)
+          example: "PE"
+      example:
+        insuredId: "00123"
+        scheduleId: 100
+        countryISO: "PE"
+
+    CreateAppointmentResponse:
+      type: object
+      required:
+        - appointmentId
+        - status
+        - message
+        - insuredId
+        - scheduleId
+        - countryISO
+        - createdAt
+      properties:
+        appointmentId:
+          type: string
+          format: uuid
+          description: Unique identifier for the created appointment
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum: [pending]
+          description: Initial status of the appointment
+          example: "pending"
+        message:
+          type: string
+          description: Human-readable message about the appointment creation
+          example: "Appointment creation in progress"
+        insuredId:
+          type: string
+          pattern: '^[0-9]{5}$'
+          description: The insured person's ID
+          example: "00123"
+        scheduleId:
+          type: integer
+          description: The schedule identifier
+          example: 100
+        countryISO:
+          type: string
+          enum: [PE, CL]
+          description: The country ISO code
+          example: "PE"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the appointment was created
+          example: "2024-09-11T10:00:00Z"
+
+    GetAppointmentsResponse:
+      type: object
+      required:
+        - appointments
+        - total
+        - pagination
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Appointment'
+          description: List of appointments for the insured person
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of appointments for this insured person
+          example: 2
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Appointment:
+      type: object
+      required:
+        - appointmentId
+        - insuredId
+        - scheduleId
+        - countryISO
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        appointmentId:
+          type: string
+          format: uuid
+          description: Unique identifier for the appointment
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        insuredId:
+          type: string
+          pattern: '^[0-9]{5}$'
+          description: The insured person's ID
+          example: "00123"
+        scheduleId:
+          type: integer
+          description: The schedule identifier
+          example: 100
+        countryISO:
+          type: string
+          enum: [PE, CL]
+          description: The country ISO code
+          example: "PE"
+        status:
+          type: string
+          enum: [pending, processed, completed]
+          description: Current status of the appointment
+          example: "completed"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the appointment was created
+          example: "2024-09-11T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the appointment was last updated
+          example: "2024-09-11T10:05:00Z"
+
+    Pagination:
+      type: object
+      required:
+        - limit
+        - offset
+        - hasMore
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          description: Maximum number of items per page
+          example: 20
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped
+          example: 0
+        hasMore:
+          type: boolean
+          description: Whether there are more items available
+          example: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code identifying the type of error
+          enum:
+            - VALIDATION_ERROR
+            - APPOINTMENT_NOT_FOUND
+            - COUNTRY_NOT_SUPPORTED
+            - INSURED_ID_INVALID
+            - INTERNAL_SERVER_ERROR
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid input data provided"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+          example:
+            field: "countryISO"
+            value: "XX"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+security:
+  - ApiKeyAuth: []
+
+externalDocs:
+  description: Find more information about the Medical Appointment Scheduling API
+  url: https://docs.medical-appointments.com

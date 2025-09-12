@@ -1,0 +1,171 @@
+# IAM Roles and Policies Infrastructure as Code
+Resources:
+  # CloudWatch Logs Group for Lambda functions
+  AppointmentLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment
+      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
+
+  AppointmentPELambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment-pe
+      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
+
+  AppointmentCLLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment-cl
+      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
+
+  AppointmentCompletionLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment-completion
+      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
+
+  # Enhanced IAM Role for Lambda functions with specific permissions
+  MedicalAppointmentLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: medical-appointment-scheduling-lambda-execution-role-${self:provider.stage}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: MedicalAppointmentDynamoDBPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !GetAtt AppointmentsTable.Arn
+                  - !Sub "${AppointmentsTable.Arn}/index/*"
+        - PolicyName: MedicalAppointmentSNSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                  - sns:GetTopicAttributes
+                Resource:
+                  - !Ref AppointmentsTopic
+        - PolicyName: MedicalAppointmentSQSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                Resource:
+                  - !GetAtt AppointmentsPEQueue.Arn
+                  - !GetAtt AppointmentsCLQueue.Arn
+                  - !GetAtt AppointmentsCompletionQueue.Arn
+        - PolicyName: MedicalAppointmentEventBridgePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                  - events:DescribeRule
+                  - events:ListTargetsByRule
+                Resource:
+                  - !GetAtt MedicalAppointmentsEventBus.Arn
+                  - !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/medical-appointment-scheduling-*"
+        - PolicyName: MedicalAppointmentKMSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                  - kms:CreateGrant
+                Resource:
+                  - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}"
+        - PolicyName: MedicalAppointmentSSMPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/medical-appointment-scheduling/${self:provider.stage}/*"
+        - PolicyName: MedicalAppointmentRDSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-data:ExecuteStatement
+                  - rds-data:BatchExecuteStatement
+                  - rds-data:BeginTransaction
+                  - rds-data:CommitTransaction
+                  - rds-data:RollbackTransaction
+                Resource: "*"
+        - PolicyName: MedicalAppointmentLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-appointment-scheduling-${self:provider.stage}-*"
+
+  # API Gateway CloudWatch Logs Role
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+Outputs:
+  MedicalAppointmentLambdaExecutionRoleArn:
+    Description: "ARN of the Lambda Execution Role"
+    Value: !GetAtt MedicalAppointmentLambdaExecutionRole.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-lambda-execution-role-arn
+
+  ApiGatewayCloudWatchLogsRoleArn:
+    Description: "ARN of the API Gateway CloudWatch Logs Role"
+    Value: !GetAtt ApiGatewayCloudWatchLogsRole.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-apigateway-logs-role-arn

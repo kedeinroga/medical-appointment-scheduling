@@ -1,0 +1,76 @@
+# SNS Topics Infrastructure as Code
+Resources:
+  # Main topic for appointment distribution
+  AppointmentsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: medical-appointment-scheduling-appointments-${self:provider.stage}
+      DisplayName: "Medical Appointments Distribution Topic"
+      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # Subscription to PE Queue with country filter
+  AppointmentsPESubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AppointmentsTopic
+      Endpoint: !GetAtt AppointmentsPEQueue.Arn
+      Protocol: sqs
+      FilterPolicy:
+        countryISO:
+          - "PE"
+      RawMessageDelivery: true
+
+  # Subscription to CL Queue with country filter  
+  AppointmentsCLSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AppointmentsTopic
+      Endpoint: !GetAtt AppointmentsCLQueue.Arn
+      Protocol: sqs
+      FilterPolicy:
+        countryISO:
+          - "CL"
+      RawMessageDelivery: true
+
+  # SNS Topic Policy to allow SQS subscriptions
+  AppointmentsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AppointmentsTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSQSSubscriptions
+            Effect: Allow
+            Principal:
+              Service: sqs.amazonaws.com
+            Action:
+              - sns:Subscribe
+              - sns:Unsubscribe
+            Resource: !Ref AppointmentsTopic
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
+Outputs:
+  AppointmentsTopicArn:
+    Description: "ARN of the Appointments SNS Topic"
+    Value: !Ref AppointmentsTopic
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-topic-arn
+
+  AppointmentsTopicName:
+    Description: "Name of the Appointments SNS Topic"
+    Value: !GetAtt AppointmentsTopic.TopicName
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-topic-name
