@@ -35,26 +35,6 @@ Resources:
         - Key: Stage
           Value: ${self:provider.stage}
 
-  # RDS Parameter Group
-  RDSParameterGroup:
-    Type: AWS::RDS::DBParameterGroup
-    Properties:
-      Family: mysql8.0
-      Description: Parameter group for Medical Appointment MySQL
-      Parameters:
-        innodb_buffer_pool_size: "{DBInstanceClassMemory*3/4}"
-        max_connections: 100
-        general_log: 0
-        slow_query_log: 1
-        long_query_time: 2
-      Tags:
-        - Key: Name
-          Value: medical-appointment-params-${self:provider.stage}
-        - Key: Service
-          Value: medical-appointment-scheduling
-        - Key: Stage
-          Value: ${self:provider.stage}
-
   # RDS Instance - Publicly accessible for development
   RDSInstance:
     Type: AWS::RDS::DBInstance
@@ -75,9 +55,6 @@ Resources:
       PubliclyAccessible: true
       VPCSecurityGroups:
         - !Ref RDSSecurityGroup
-      
-      # Parameter Group
-      DBParameterGroupName: !Ref RDSParameterGroup
       
       # Backup Configuration
       BackupRetentionPeriod: 1
