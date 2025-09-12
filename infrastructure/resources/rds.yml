@@ -1,22 +1,22 @@
 Resources:
-  # RDS Security Group - Allow MySQL access from anywhere (for development)
-  RDSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for Medical Appointment RDS instance
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          CidrIp: 0.0.0.0/0
-          Description: Allow MySQL access (development only)
-      Tags:
-        - Key: Name
-          Value: medical-appointment-rds-sg-${self:provider.stage}
-        - Key: Service
-          Value: medical-appointment-scheduling
-        - Key: Stage
-          Value: ${self:provider.stage}
+  # RDS Security Group - Temporarily disabled due to VPC configuration issues
+  # RDSSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Security group for Medical Appointment RDS instance
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 3306
+  #         ToPort: 3306
+  #         CidrIp: 0.0.0.0/0
+  #         Description: Allow MySQL access (development only)
+  #     Tags:
+  #       - Key: Name
+  #         Value: medical-appointment-rds-sg-${self:provider.stage}
+  #       - Key: Service
+  #         Value: medical-appointment-scheduling
+  #       - Key: Stage
+  #         Value: ${self:provider.stage}
 
   # RDS Master Password Secret
   RDSMasterSecret:
@@ -51,10 +51,11 @@ Resources:
       StorageType: gp2
       StorageEncrypted: true
       
-      # Network Configuration - Publicly accessible for development
+      # Network Configuration - Publicly accessible for development  
       PubliclyAccessible: true
-      VPCSecurityGroups:
-        - !Ref RDSSecurityGroup
+      # Use default security group for simplicity
+      # VPCSecurityGroups:
+      #   - !Ref RDSSecurityGroup
       
       # Backup Configuration
       BackupRetentionPeriod: 1
