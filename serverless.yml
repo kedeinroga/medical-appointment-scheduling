@@ -12,9 +12,9 @@ provider:
   timeout: 30
   logRetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays, 7}
   
-  # Use deployment bucket from infrastructure stack
+  # Use deployment bucket from infrastructure stack via CloudFormation imports
   deploymentBucket:
-    name: ${ssm:/medical-appointment/${self:provider.stage}/deployment/bucket}
+    name: ${cf:medical-appointment-infrastructure-${self:provider.stage}.DeploymentBucketName}
     serverSideEncryption: AES256
   
   environment:
@@ -26,11 +26,12 @@ provider:
     APPOINTMENTS_PE_QUEUE_URL: !Ref AppointmentsPEQueue
     APPOINTMENTS_CL_QUEUE_URL: !Ref AppointmentsCLQueue
     EVENTBRIDGE_BUS_NAME: !Ref MedicalAppointmentsEventBus
-    RDS_HOST: ${ssm:/medical-appointment/${self:provider.stage}/rds/host}
-    RDS_DATABASE: ${ssm:/medical-appointment/${self:provider.stage}/rds/database}
-    RDS_PORT: ${ssm:/medical-appointment/${self:provider.stage}/rds/port}
-    RDS_USERNAME: ${ssm:/medical-appointment/${self:provider.stage}/rds/username}
-    RDS_PASSWORD: ${ssm:/medical-appointment/${self:provider.stage}/rds/password}
+    # Use CloudFormation imports instead of Parameter Store for now
+    RDS_HOST: ${cf:medical-appointment-infrastructure-${self:provider.stage}.RDSEndpoint}
+    RDS_DATABASE: medical_appointments
+    RDS_PORT: ${cf:medical-appointment-infrastructure-${self:provider.stage}.RDSPort}
+    RDS_USERNAME: admin
+    RDS_PASSWORD: ${cf:medical-appointment-infrastructure-${self:provider.stage}.DatabasePassword}
 
   iam:
     role:

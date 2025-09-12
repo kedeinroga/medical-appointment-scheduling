@@ -34,3 +34,9 @@ Outputs:
     Value: admin
     Export:
       Name: ${self:service}-${self:provider.stage}-database-username
+
+  DatabasePassword:
+    Description: Database password from Secrets Manager
+    Value: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
+    Export:
+      Name: ${self:service}-${self:provider.stage}-database-password
