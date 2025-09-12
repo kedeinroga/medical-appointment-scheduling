@@ -17,12 +17,6 @@ Outputs:
     Export:
       Name: ${self:service}-${self:provider.stage}-deployment-bucket
 
-  LambdaSecurityGroup:
-    Description: Security group for Lambda functions
-    Value: !Ref LambdaSecurityGroup
-    Export:
-      Name: ${self:service}-${self:provider.stage}-lambda-sg
-
   RDSSecurityGroup:
     Description: Security group for RDS instance
     Value: !Ref RDSSecurityGroup

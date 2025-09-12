@@ -15,15 +15,6 @@ provider:
   deploymentBucket:
     name: ${ssm:/medical-appointment/${self:provider.stage}/deployment/bucket}
     serverSideEncryption: AES256
-    
-  # Use VPC configuration for RDS access
-  vpc:
-    securityGroupIds:
-      - ${ssm:/medical-appointment/${self:provider.stage}/lambda/security-group}
-    subnetIds:
-      # These would be created by infrastructure stack or use default VPC subnets
-      - subnet-12345678  # This should be parameterized in a real deployment
-      - subnet-87654321  # This should be parameterized in a real deployment
   
   environment:
     STAGE: ${self:provider.stage}

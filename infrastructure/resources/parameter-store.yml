@@ -66,15 +66,3 @@ Resources:
       Tags:
         Service: medical-appointment-scheduling
         Stage: ${self:provider.stage}
-
-  # Lambda Security Group Parameter
-  LambdaSecurityGroupParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /medical-appointment/${self:provider.stage}/lambda/security-group
-      Type: String
-      Value: !Ref LambdaSecurityGroup
-      Description: Security group for Lambda functions
-      Tags:
-        Service: medical-appointment-scheduling
-        Stage: ${self:provider.stage}
