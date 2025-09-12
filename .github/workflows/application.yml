@@ -68,19 +68,29 @@ jobs:
     - name: Install Serverless Framework
       run: npm install -g serverless@3
       
-    - name: Get deployment bucket from infrastructure
+    - name: Check infrastructure prerequisites
       id: infrastructure
       run: |
-        # Get the deployment bucket created by infrastructure stack
-        BUCKET_NAME=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/deployment/bucket" --query "Parameter.Value" --output text)
-        echo "deployment-bucket=$BUCKET_NAME" >> $GITHUB_OUTPUT
+        echo "🔍 Checking if infrastructure is deployed..."
         
-        # Verify infrastructure is ready
-        echo "🔍 Verifying infrastructure prerequisites..."
-        aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/rds/host" > /dev/null
-        echo "✅ Infrastructure is ready for application deployment"
+        # Check if infrastructure parameters exist
+        if aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/deployment/bucket" > /dev/null 2>&1; then
+          echo "✅ Infrastructure found, proceeding with deployment"
+          BUCKET_NAME=$(aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/deployment/bucket" --query "Parameter.Value" --output text)
+          echo "deployment-bucket=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "infrastructure-ready=true" >> $GITHUB_OUTPUT
+          
+          # Verify RDS is ready
+          aws ssm get-parameter --name "/medical-appointment/${{ matrix.stage }}/rds/host" > /dev/null
+          echo "✅ RDS infrastructure verified"
+        else
+          echo "❌ Infrastructure not found. Please deploy infrastructure first."
+          echo "infrastructure-ready=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
         
     - name: Deploy Application Stack
+      if: steps.infrastructure.outputs.infrastructure-ready == 'true'
       env:
         SLS_DEPLOYMENT_BUCKET: ${{ steps.infrastructure.outputs.deployment-bucket }}
       run: |

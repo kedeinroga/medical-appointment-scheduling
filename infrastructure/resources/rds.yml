@@ -18,6 +18,23 @@ Resources:
         - Key: Stage
           Value: ${self:provider.stage}
 
+  # RDS Master Password Secret
+  RDSMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: medical-appointment-rds-${self:provider.stage}
+      Description: Master password for Medical Appointment RDS instance
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
   # RDS Parameter Group
   RDSParameterGroup:
     Type: AWS::RDS::DBParameterGroup
@@ -41,10 +58,10 @@ Resources:
   # RDS Instance - Publicly accessible for development
   RDSInstance:
     Type: AWS::RDS::DBInstance
-    DeletionPolicy: ${self:provider.stage == 'prod' ? 'Snapshot' : 'Delete'}
+    DeletionPolicy: Delete
     Properties:
       DBInstanceIdentifier: medical-appointments-db-${self:provider.stage}
-      DBInstanceClass: ${self:provider.stage == 'prod' ? 'db.t3.small' : 'db.t3.micro'}
+      DBInstanceClass: db.t3.micro
       Engine: mysql
       EngineVersion: "8.0"
       MasterUsername: admin
@@ -63,18 +80,13 @@ Resources:
       DBParameterGroupName: !Ref RDSParameterGroup
       
       # Backup Configuration
-      BackupRetentionPeriod: ${self:provider.stage == 'prod' ? 7 : 1}
-      DeleteAutomatedBackups: ${self:provider.stage == 'prod' ? false : true}
+      BackupRetentionPeriod: 1
+      DeleteAutomatedBackups: true
       PreferredBackupWindow: "03:00-04:00"
       PreferredMaintenanceWindow: "sun:04:00-sun:05:00"
       
-      # Monitoring
-      MonitoringInterval: ${self:provider.stage == 'prod' ? 60 : 0}
-      MonitoringRoleArn: ${self:provider.stage == 'prod' ? !GetAtt RDSEnhancedMonitoringRole.Arn : !Ref "AWS::NoValue"}
-      EnablePerformanceInsights: ${self:provider.stage == 'prod' ? true : false}
-      
-      # Multi-AZ for production
-      MultiAZ: ${self:provider.stage == 'prod' ? true : false}
+      # Single-AZ for development
+      MultiAZ: false
       
       Tags:
         - Key: Name
@@ -83,44 +95,3 @@ Resources:
           Value: medical-appointment-scheduling
         - Key: Stage
           Value: ${self:provider.stage}
-
-  # RDS Master Password Secret
-  RDSMasterSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: medical-appointment-rds-${self:provider.stage}
-      Description: Master password for Medical Appointment RDS instance
-      GenerateSecretString:
-        SecretStringTemplate: '{"username": "admin"}'
-        GenerateStringKey: password
-        PasswordLength: 32
-        ExcludeCharacters: '"@/\'
-      Tags:
-        - Key: Service
-          Value: medical-appointment-scheduling
-        - Key: Stage
-          Value: ${self:provider.stage}
-
-  # Enhanced Monitoring Role (for production)
-  RDSEnhancedMonitoringRole:
-    Type: AWS::IAM::Role
-    Condition: IsProduction
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: monitoring.rds.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
-      Tags:
-        - Key: Service
-          Value: medical-appointment-scheduling
-        - Key: Stage
-          Value: ${self:provider.stage}
-
-# Conditions
-Conditions:
-  IsProduction: !Equals [${self:provider.stage}, 'prod']
