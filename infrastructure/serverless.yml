@@ -1,6 +1,7 @@
 service: medical-appointment-infrastructure
 frameworkVersion: "3"
 
+# Infrastructure ready for CI/CD deployment
 provider:
   name: aws
   runtime: nodejs18.x
