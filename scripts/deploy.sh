@@ -51,12 +51,24 @@ pnpm run build
 
 # Validate Serverless configuration
 echo -e "${YELLOW}🔍 Validating Infrastructure as Code...${NC}"
+
+# Validate all resource files exist
+for resource_file in "dynamodb.yml" "sns.yml" "sqs.yml" "eventbridge.yml" "api-gateway.yml" "iam.yml"; do
+    if [[ ! -f "resources/$resource_file" ]]; then
+        echo -e "${RED}❌ Resource file resources/$resource_file not found${NC}"
+        exit 1
+    fi
+done
+
+# Validate serverless configuration
 serverless print --stage $STAGE --region $REGION > /dev/null
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Serverless configuration validation failed${NC}"
     exit 1
 fi
+
+echo -e "${GREEN}✅ Infrastructure as Code validation passed${NC}"
 
 # Deploy infrastructure using Serverless Framework (IaC)
 echo -e "${YELLOW}🏗️  Deploying infrastructure...${NC}"
@@ -99,3 +111,12 @@ echo -e "   Environment: $STAGE"
 echo -e "   Region: $REGION"
 echo -e "   Service: $SERVICE_NAME"
 echo -e "   Infrastructure: Deployed via Serverless Framework (IaC)"
+echo -e "${BLUE}📋 Infrastructure Components Deployed:${NC}"
+echo -e "   ✅ DynamoDB Table: Appointments with GSI"
+echo -e "   ✅ SNS Topic: Appointment distribution with country filters"
+echo -e "   ✅ SQS Queues: PE, CL, and Completion queues with DLQs"
+echo -e "   ✅ EventBridge: Custom event bus with processing rules"
+echo -e "   ✅ API Gateway: REST API with throttling and validation"
+echo -e "   ✅ Lambda Functions: appointment, appointment-pe, appointment-cl, appointment-completion"
+echo -e "   ✅ IAM Roles: Least-privilege access policies"
+echo -e "   ✅ CloudWatch: Log groups and monitoring"

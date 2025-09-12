@@ -1,0 +1,42 @@
+# Staging environment configuration
+rds:
+  host: staging-medical-rds.cluster-xxxxx.us-east-1.rds.amazonaws.com
+  database: medical_appointments_staging
+  port: 3306
+  username: staging_user
+  password: staging_password_change_me
+
+api:
+  throttling:
+    burstLimit: 2000
+    rateLimit: 1000
+  caching:
+    enabled: true
+    ttlInSeconds: 600
+
+monitoring:
+  alarms:
+    enabled: true
+    errorThreshold: 8
+    durationThreshold: 8000
+
+logging:
+  level: INFO
+  retentionDays: 14
+  sampling: 0.5
+
+security:
+  encryption:
+    kmsKeyId: alias/medical-appointment-scheduling-staging
+  cors:
+    allowOrigin: "https://staging-medical-appointments.example.com"
+    allowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+    allowMethods: "GET,POST,OPTIONS"
+
+performance:
+  dynamodb:
+    billingMode: PAY_PER_REQUEST
+  lambda:
+    memorySize: 768
+    timeout: 30
+    reservedConcurrency: 50

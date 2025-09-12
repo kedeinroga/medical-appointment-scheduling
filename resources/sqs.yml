@@ -170,8 +170,8 @@ Resources:
               - sqs:SendMessage
             Resource: !GetAtt AppointmentsCompletionQueue.Arn
             Condition:
-              ArnEquals:
-                "aws:SourceArn": !GetAtt MedicalAppointmentsEventBus.Arn
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
 
 Outputs:
   AppointmentsPEQueueUrl:

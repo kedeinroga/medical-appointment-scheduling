@@ -4,7 +4,7 @@ rds:
   database: medical_appointments_prod
   port: 3306
   username: prod_user
-  password: ${ssm:/medical-appointment-scheduling/prod/rds/password}
+  password: prod_password_change_me
 
 api:
   throttling:

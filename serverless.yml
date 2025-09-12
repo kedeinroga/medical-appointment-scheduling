@@ -146,6 +146,7 @@ resources:
   - ${file(resources/sns.yml)}
   - ${file(resources/sqs.yml)}
   - ${file(resources/eventbridge.yml)}
+  - ${file(resources/api-gateway.yml)}
   - ${file(resources/iam.yml)}
 
 # Package configuration
