@@ -1,5 +1,5 @@
 Resources:
-  # Simple parameters without tags initially to debug the issue
+  # Simple parameters with Overwrite: true to handle existing parameters
   RDSDatabaseParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -7,48 +7,61 @@ Resources:
       Type: String
       Value: medical_appointments
       Description: Database name for Medical Appointment
+      Overwrite: true
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
 
-  RDSUsernameParameter:
+  # RDS Connection Parameters with dependencies and Overwrite: true
+  RDSHostParameter:
     Type: AWS::SSM::Parameter
+    DependsOn: RDSInstance
     Properties:
-      Name: /medical-appointment/${self:provider.stage}/rds/username
+      Name: /medical-appointment/${self:provider.stage}/rds/host
       Type: String
-      Value: admin
-      Description: Database username for Medical Appointment
+      Value: !GetAtt RDSInstance.Endpoint.Address
+      Description: RDS endpoint for Medical Appointment DB
+      Overwrite: true
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
 
-  # These will be added later once the basic ones work
-  # RDSHostParameter:
-  #   Type: AWS::SSM::Parameter
-  #   DependsOn: RDSInstance
-  #   Properties:
-  #     Name: /medical-appointment/${self:provider.stage}/rds/host
-  #     Type: String
-  #     Value: !GetAtt RDSInstance.Endpoint.Address
-  #     Description: RDS endpoint for Medical Appointment DB
+  RDSPortParameter:
+    Type: AWS::SSM::Parameter
+    DependsOn: RDSInstance
+    Properties:
+      Name: /medical-appointment/${self:provider.stage}/rds/port
+      Type: String
+      Value: !GetAtt RDSInstance.Endpoint.Port
+      Description: RDS port for Medical Appointment DB
+      Overwrite: true
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
 
-  # RDSPortParameter:
-  #   Type: AWS::SSM::Parameter
-  #   DependsOn: RDSInstance
-  #   Properties:
-  #     Name: /medical-appointment/${self:provider.stage}/rds/port
-  #     Type: String
-  #     Value: !GetAtt RDSInstance.Endpoint.Port
-  #     Description: RDS port for Medical Appointment DB
+  RDSPasswordParameter:
+    Type: AWS::SSM::Parameter
+    DependsOn: RDSMasterSecret
+    Properties:
+      Name: /medical-appointment/${self:provider.stage}/rds/password
+      Type: String
+      Value: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
+      Description: Database password for Medical Appointment (from Secrets Manager)
+      Overwrite: true
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
 
-  # RDSPasswordParameter:
-  #   Type: AWS::SSM::Parameter
-  #   DependsOn: RDSMasterSecret
-  #   Properties:
-  #     Name: /medical-appointment/${self:provider.stage}/rds/password
-  #     Type: String
-  #     Value: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
-  #     Description: Database password for Medical Appointment (from Secrets Manager)
-
-  # DeploymentBucketParameter:
-  #   Type: AWS::SSM::Parameter
-  #   DependsOn: ServerlessDeploymentBucket
-  #   Properties:
-  #     Name: /medical-appointment/${self:provider.stage}/deployment/bucket
-  #     Type: String
-  #     Value: !Ref ServerlessDeploymentBucket
-  #     Description: S3 bucket for serverless deployments
+  # Deployment Bucket Parameter
+  DeploymentBucketParameter:
+    Type: AWS::SSM::Parameter
+    DependsOn: ServerlessDeploymentBucket
+    Properties:
+      Name: /medical-appointment/${self:provider.stage}/deployment/bucket
+      Type: String
+      Value: !Ref ServerlessDeploymentBucket
+      Description: S3 bucket for serverless deployments
+      Overwrite: true
+      Tags:
+        Service: medical-appointment-scheduling
+        Stage: ${self:provider.stage}
