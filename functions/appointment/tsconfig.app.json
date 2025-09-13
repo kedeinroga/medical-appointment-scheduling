@@ -5,8 +5,14 @@
     "module": "commonjs",
     "types": ["node"],
     "target": "ES2022",
-    "noEmit": false
+    "noEmit": false,
+    "composite": true
   },
+  "references": [
+    { "path": "../../libs/core/use-cases" },
+    { "path": "../../libs/infrastructure" },
+    { "path": "../../libs/shared" }
+  ],
   "exclude": ["jest.config.js", "**/*.spec.ts", "**/*.test.ts", "__tests__/**/*"],
   "include": ["*.ts", "src/**/*.ts"]
 }

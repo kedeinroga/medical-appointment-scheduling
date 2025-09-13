@@ -1,7 +1,7 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../../dist/libs/core/domain",
+    "outDir": "../../dist/libs/infrastructure",
     "module": "commonjs",
     "types": ["node"],
     "target": "ES2022",
@@ -11,6 +11,11 @@
     "rootDir": "./src",
     "composite": true
   },
+  "references": [
+    { "path": "../core/domain" },
+    { "path": "../core/use-cases" },
+    { "path": "../shared" }
+  ],
   "exclude": ["jest.config.js", "**/*.spec.ts", "**/*.test.ts", "__tests__/**/*", "src/__tests__/**/*", "**/test.factories.ts", "**/test.constants.ts"],
   "include": ["src/**/*.ts"]
 }

@@ -1,18 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "baseUrl": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "noEmit": false,
-    "paths": {
-      "@medical-appointment/core-domain": ["../core/domain/src"],
-      "@medical-appointment/core-use-cases": ["../core/use-cases/src"],
-      "@medical-appointment/shared": ["../shared/src"]
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
     }
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/__tests__/**"]
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "esModuleInterop": true
+  }
 }

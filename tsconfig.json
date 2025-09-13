@@ -1,12 +1,15 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "noEmit": true
-  },
-  "include": [
-    "functions/**/*",
-    "libs/**/*",
-    "scripts/**/*"
+  "files": [],
+  "include": [],
+  "references": [
+    { "path": "./libs/core/domain" },
+    { "path": "./libs/shared" },
+    { "path": "./libs/core/use-cases" },
+    { "path": "./libs/infrastructure" },
+    { "path": "./functions/appointment" },
+    { "path": "./functions/appointment-pe" },
+    { "path": "./functions/appointment-cl" },
+    { "path": "./functions/appointment-completion" }
   ]
 }

@@ -1,7 +1,7 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../../dist/libs/core/domain",
+    "outDir": "../../dist/libs/shared",
     "module": "commonjs",
     "types": ["node"],
     "target": "ES2022",
