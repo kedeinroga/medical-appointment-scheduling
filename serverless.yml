@@ -153,6 +153,12 @@ functions:
             parameters:
               paths:
                 insuredId: true
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - AppointmentsCompletionQueue
+              - Arn
+          batchSize: 10
 
   # Peru appointment processor
   appointment-pe:
@@ -175,18 +181,6 @@ functions:
           arn:
             Fn::GetAtt:
               - AppointmentsCLQueue
-              - Arn
-          batchSize: 10
-
-  # Appointment completion processor
-  appointment-completion:
-    handler: functions/appointment-completion/handler.main
-    description: "Complete appointment processing and update status"
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - AppointmentsCompletionQueue
               - Arn
           batchSize: 10
 

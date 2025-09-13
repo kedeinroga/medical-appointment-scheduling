@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context, SQSEvent } from 'aws-lambda';
 
 // Mock AWS Lambda Powertools Logger
 jest.mock('@aws-lambda-powertools/logger', () => ({
@@ -31,6 +31,14 @@ jest.mock('@medical-appointment/infrastructure', () => ({
             updatedAt: '2024-01-01T10:00:00Z'
           }
         ]
+      })
+    }),
+    createCompleteAppointmentUseCase: jest.fn().mockReturnValue({
+      execute: jest.fn().mockResolvedValue({
+        appointmentId: 'test-id',
+        countryISO: 'PE',
+        message: 'Appointment completed successfully for PE',
+        status: 'completed'
       })
     })
   }
@@ -181,6 +189,70 @@ describe('Appointment Lambda Handler', () => {
 
       expect(result.statusCode).toBe(404);
       expect(JSON.parse(result.body).error.code).toBe('ROUTE_NOT_FOUND');
+    });
+  });
+
+  describe('SQS completion events', () => {
+    it('should process SQS completion events successfully', async () => {
+      const sqsEvent = {
+        Records: [
+          {
+            messageId: 'test-message-id',
+            body: JSON.stringify({
+              detail: {
+                appointmentId: 'test-appointment-id',
+                insuredId: '12345',
+                countryISO: 'PE',
+                scheduleId: 100,
+                status: 'processed'
+              },
+              'detail-type': 'Appointment Processed'
+            })
+          }
+        ]
+      };
+
+      await expect(main(sqsEvent, mockContext, () => {})).resolves.toBeUndefined();
+    });
+
+    it('should skip SQS events with missing required fields', async () => {
+      const sqsEvent = {
+        Records: [
+          {
+            messageId: 'test-message-id',
+            body: JSON.stringify({
+              detail: {
+                appointmentId: 'test-appointment-id',
+                // Missing insuredId, countryISO, scheduleId
+                status: 'processed'
+              }
+            })
+          }
+        ]
+      };
+
+      await expect(main(sqsEvent, mockContext, () => {})).resolves.toBeUndefined();
+    });
+
+    it('should skip SQS events with non-processed status', async () => {
+      const sqsEvent = {
+        Records: [
+          {
+            messageId: 'test-message-id',
+            body: JSON.stringify({
+              detail: {
+                appointmentId: 'test-appointment-id',
+                insuredId: '12345',
+                countryISO: 'PE',
+                scheduleId: 100,
+                status: 'pending' // Not processed
+              }
+            })
+          }
+        ]
+      };
+
+      await expect(main(sqsEvent, mockContext, () => {})).resolves.toBeUndefined();
     });
   });
 });
