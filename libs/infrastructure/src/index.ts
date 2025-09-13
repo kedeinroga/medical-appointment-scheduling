@@ -3,6 +3,7 @@
 
 // Adapters - Repositories
 export * from './adapters/repositories/dynamodb-appointment.repository';
+export * from './adapters/repositories/mysql-appointment.repository';
 export * from './adapters/repositories/mysql-schedule.repository';
 
 // Adapters - Messaging
@@ -20,6 +21,7 @@ export * from './config/environment.config';
 
 // Factories
 export * from './factories/adapter.factory';
+export * from './factories/country-processing.factory';
 export * from './factories/use-case.factory';
 
 // Errors

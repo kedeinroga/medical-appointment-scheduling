@@ -42,40 +42,34 @@ export class MySQLScheduleRepository implements IScheduleRepository {
     try {
       connection = await this.pool.getConnection();
       
-      const tableName = this.getTableNameByCountry(countryISO.getValue());
       const scheduleJson = schedule.toJSON();
 
       const insertQuery = `
-        INSERT INTO ${tableName} (
+        INSERT INTO schedules (
           center_id,
-          country_iso,
-          date,
-          medic_id,
-          processed_at,
-          schedule_id,
           specialty_id,
-          status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          medic_id,
+          available_date,
+          is_available,
+          country_iso
+        ) VALUES (?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-          processed_at = VALUES(processed_at),
-          status = VALUES(status)
+          is_available = VALUES(is_available),
+          updated_at = CURRENT_TIMESTAMP
       `;
 
       await connection.execute(insertQuery, [
         scheduleJson.centerId,
-        countryISO.getValue(),
-        scheduleJson.date,
-        scheduleJson.medicId,
-        new Date().toISOString(),
-        scheduleJson.scheduleId,
         scheduleJson.specialtyId,
-        'processed'
+        scheduleJson.medicId,
+        scheduleJson.date,
+        true,
+        countryISO.getValue()
       ]);
 
       this.logger.info('Schedule saved to MySQL successfully', {
         countryISO: countryISO.getValue(),
-        scheduleId: scheduleJson.scheduleId,
-        tableName
+        scheduleId: scheduleJson.scheduleId
       });
 
     } catch (error) {
@@ -97,30 +91,26 @@ export class MySQLScheduleRepository implements IScheduleRepository {
     try {
       connection = await this.pool.getConnection();
       
-      const tableName = this.getTableNameByCountry(countryISO.getValue());
-      
       const selectQuery = `
         SELECT 
           center_id,
-          date,
-          medic_id,
-          schedule_id,
           specialty_id,
-          status
-        FROM ${tableName} 
-        WHERE schedule_id = ?
-        ORDER BY processed_at DESC
+          medic_id,
+          available_date,
+          id as schedule_id
+        FROM schedules 
+        WHERE id = ? AND country_iso = ?
+        ORDER BY created_at DESC
         LIMIT 1
       `;
 
-      const [rows] = await connection.execute(selectQuery, [scheduleId]);
+      const [rows] = await connection.execute(selectQuery, [scheduleId, countryISO.getValue()]);
       const rowsArray = rows as any[];
 
       if (!rowsArray || rowsArray.length === 0) {
         this.logger.info('Schedule not found in MySQL', {
           countryISO: countryISO.getValue(),
-          scheduleId,
-          tableName
+          scheduleId
         });
         return null;
       }
@@ -128,7 +118,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
       const row = rowsArray[0];
       const schedule = Schedule.create({
         centerId: row.center_id,
-        date: new Date(row.date),
+        date: new Date(row.available_date),
         medicId: row.medic_id,
         scheduleId: row.schedule_id,
         specialtyId: row.specialty_id
@@ -136,8 +126,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
 
       this.logger.info('Schedule retrieved from MySQL successfully', {
         countryISO: countryISO.getValue(),
-        scheduleId,
-        tableName
+        scheduleId
       });
 
       return schedule;
@@ -162,28 +151,25 @@ export class MySQLScheduleRepository implements IScheduleRepository {
     try {
       connection = await this.pool.getConnection();
       
-      const tableName = this.getTableNameByCountry(countryISO.getValue());
-      
       let selectQuery = `
         SELECT 
           center_id,
-          date,
-          medic_id,
-          schedule_id,
           specialty_id,
-          status
-        FROM ${tableName} 
-        WHERE status = 'available'
+          medic_id,
+          available_date,
+          id as schedule_id
+        FROM schedules 
+        WHERE is_available = TRUE AND country_iso = ?
       `;
 
-      const queryParams: any[] = [];
+      const queryParams: any[] = [countryISO.getValue()];
 
       if (date) {
-        selectQuery += ' AND DATE(date) = DATE(?)';
+        selectQuery += ' AND DATE(available_date) = DATE(?)';
         queryParams.push(date.toISOString());
       }
 
-      selectQuery += ' ORDER BY date ASC';
+      selectQuery += ' ORDER BY available_date ASC';
 
       const [rows] = await connection.execute(selectQuery, queryParams);
       const rowsArray = rows as any[];
@@ -191,7 +177,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
       const schedules = rowsArray.map(row => 
         Schedule.create({
           centerId: row.center_id,
-          date: new Date(row.date),
+          date: new Date(row.available_date),
           medicId: row.medic_id,
           scheduleId: row.schedule_id,
           specialtyId: row.specialty_id
@@ -200,8 +186,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
 
       this.logger.info('Available schedules retrieved from MySQL successfully', {
         countryISO: countryISO.getValue(),
-        count: schedules.length,
-        tableName
+        count: schedules.length
       });
 
       return schedules;
@@ -225,17 +210,15 @@ export class MySQLScheduleRepository implements IScheduleRepository {
     try {
       connection = await this.pool.getConnection();
       
-      const tableName = this.getTableNameByCountry(countryISO.getValue());
-      
       const updateQuery = `
-        UPDATE ${tableName}
-        SET status = 'reserved', processed_at = ?
-        WHERE schedule_id = ?
+        UPDATE schedules
+        SET is_available = FALSE, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND country_iso = ?
       `;
 
       const [result] = await connection.execute(updateQuery, [
-        new Date().toISOString(),
-        scheduleId
+        scheduleId,
+        countryISO.getValue()
       ]);
 
       const updateResult = result as any;
@@ -246,8 +229,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
 
       this.logger.info('Schedule marked as reserved successfully', {
         countryISO: countryISO.getValue(),
-        scheduleId,
-        tableName
+        scheduleId
       });
 
     } catch (error) {
@@ -272,17 +254,6 @@ export class MySQLScheduleRepository implements IScheduleRepository {
       this.logger.error('Failed to close MySQL connection pool', {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-    }
-  }
-
-  private getTableNameByCountry(countryISO: string): string {
-    switch (countryISO.toUpperCase()) {
-      case 'PE':
-        return 'schedules_pe';
-      case 'CL':
-        return 'schedules_cl';
-      default:
-        throw new Error(`Unsupported country: ${countryISO}`);
     }
   }
 }

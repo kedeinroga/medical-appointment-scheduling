@@ -8,6 +8,7 @@ import {
 
 // Infrastructure imports
 import { DynamoDBAppointmentRepository } from '../adapters/repositories/dynamodb-appointment.repository';
+import { MySQLAppointmentRepository } from '../adapters/repositories/mysql-appointment.repository';
 import { EventBridgeAdapter } from '../adapters/messaging/eventbridge.adapter';
 import { MySQLScheduleRepository } from '../adapters/repositories/mysql-schedule.repository';
 import { SNSAdapter } from '../adapters/messaging/sns.adapter';
@@ -19,6 +20,7 @@ import { SQSAdapter } from '../adapters/messaging/sqs.adapter';
  */
 export class UseCaseFactory {
   private static appointmentRepository: DynamoDBAppointmentRepository;
+  private static mysqlAppointmentRepository: MySQLAppointmentRepository;
   private static scheduleRepository: MySQLScheduleRepository;
   private static snsAdapter: SNSAdapter;
   private static sqsAdapter: SQSAdapter;
@@ -46,10 +48,11 @@ export class UseCaseFactory {
 
   /**
    * Creates a ProcessAppointmentUseCase with all dependencies injected
+   * Uses MySQL repository for country-specific processing
    */
   public static createProcessAppointmentUseCase(): ProcessAppointmentUseCase {
     return new ProcessAppointmentUseCase(
-      this.getAppointmentRepository(),
+      this.getMySQLAppointmentRepository(),
       this.getEventBridgeAdapter(),
       this.getScheduleRepository()
     );
@@ -73,6 +76,16 @@ export class UseCaseFactory {
       this.appointmentRepository = new DynamoDBAppointmentRepository();
     }
     return this.appointmentRepository;
+  }
+
+  /**
+   * Gets or creates a MySQL appointment repository instance
+   */
+  public static getMySQLAppointmentRepository(): MySQLAppointmentRepository {
+    if (!this.mysqlAppointmentRepository) {
+      this.mysqlAppointmentRepository = new MySQLAppointmentRepository();
+    }
+    return this.mysqlAppointmentRepository;
   }
 
   /**
@@ -120,6 +133,7 @@ export class UseCaseFactory {
    */
   public static reset(): void {
     this.appointmentRepository = undefined as any;
+    this.mysqlAppointmentRepository = undefined as any;
     this.scheduleRepository = undefined as any;
     this.snsAdapter = undefined as any;
     this.sqsAdapter = undefined as any;

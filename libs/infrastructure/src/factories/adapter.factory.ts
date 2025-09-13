@@ -3,6 +3,7 @@ import { CountryISO } from '@medical-appointment/core-domain';
 
 // Infrastructure imports
 import { DynamoDBAppointmentRepository } from '../adapters/repositories/dynamodb-appointment.repository';
+import { MySQLAppointmentRepository } from '../adapters/repositories/mysql-appointment.repository';
 import { EventBridgeAdapter } from '../adapters/messaging/eventbridge.adapter';
 import { MySQLScheduleRepository } from '../adapters/repositories/mysql-schedule.repository';
 import { SNSAdapter } from '../adapters/messaging/sns.adapter';
@@ -23,6 +24,19 @@ export class AdapterFactory {
     
     if (!this.instances.has(key)) {
       this.instances.set(key, new DynamoDBAppointmentRepository());
+    }
+    
+    return this.instances.get(key);
+  }
+
+  /**
+   * Creates or gets a MySQL appointment repository instance for country-specific processing
+   */
+  public static createMySQLAppointmentRepository(): MySQLAppointmentRepository {
+    const key = 'mysqlAppointmentRepository';
+    
+    if (!this.instances.has(key)) {
+      this.instances.set(key, new MySQLAppointmentRepository());
     }
     
     return this.instances.get(key);
@@ -85,6 +99,7 @@ export class AdapterFactory {
    */
   public static createCountryProcessingAdapters(countryISO: CountryISO) {
     return {
+      appointmentRepository: this.createMySQLAppointmentRepository(),
       eventBridgeAdapter: this.createEventBridgeAdapter(),
       scheduleRepository: this.createScheduleRepository(countryISO.getValue()),
       sqsAdapter: this.createSQSAdapter()
@@ -108,6 +123,7 @@ export class AdapterFactory {
   public static createRepositoryAdapters(countryISO?: string) {
     return {
       appointmentRepository: this.createAppointmentRepository(),
+      mysqlAppointmentRepository: this.createMySQLAppointmentRepository(),
       scheduleRepository: this.createScheduleRepository(countryISO)
     };
   }
