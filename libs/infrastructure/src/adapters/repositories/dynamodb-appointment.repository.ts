@@ -97,7 +97,7 @@ export class DynamoDBAppointmentRepository implements IAppointmentRepository {
     try {
       const result = await this.dynamoClient.send(new QueryCommand({
         TableName: this.tableName,
-        IndexName: 'InsuredIdIndex',
+        IndexName: 'insuredId-createdAt-index',
         KeyConditionExpression: 'insuredId = :insuredId',
         ExpressionAttributeValues: {
           ':insuredId': insuredId.getValue()
