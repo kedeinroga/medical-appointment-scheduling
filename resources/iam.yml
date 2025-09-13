@@ -43,6 +43,8 @@ Resources:
                   - sns:GetTopicAttributes
                 Resource:
                   - !Ref AppointmentsTopic
+                  - !Ref AppointmentsPETopic
+                  - !Ref AppointmentsCLTopic
         - PolicyName: MedicalAppointmentSQSPolicy
           PolicyDocument:
             Version: "2012-10-17"
