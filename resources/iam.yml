@@ -90,7 +90,7 @@ Resources:
                   - kms:CreateGrant
                   - kms:DescribeKey
                 Resource:
-                  - !GetAtt SQSKMSKeyPolicy.Arn
+                  - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/medical-appointment-sqs-${self:provider.stage}"
         - PolicyName: MedicalAppointmentSSMPolicy
           PolicyDocument:
             Version: "2012-10-17"

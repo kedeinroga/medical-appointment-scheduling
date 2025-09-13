@@ -36,10 +36,10 @@ Resources:
               - kms:GenerateDataKey*
               - kms:DescribeKey
             Resource: "*"
-          - Sid: Allow Lambda execution role to use the key
+          - Sid: Allow Lambda service to use the key
             Effect: Allow
             Principal:
-              AWS: !GetAtt MedicalAppointmentLambdaExecutionRole.Arn
+              Service: lambda.amazonaws.com
             Action:
               - kms:Decrypt
               - kms:GenerateDataKey
