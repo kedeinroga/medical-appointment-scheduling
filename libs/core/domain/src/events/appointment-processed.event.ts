@@ -26,6 +26,7 @@ export class AppointmentProcessedEvent extends DomainEvent {
     occurredOn: string;
     processedAt: string;
     scheduleId: number;
+    status: string;
   } {
     return {
       appointmentId: this.appointmentId,
@@ -35,7 +36,8 @@ export class AppointmentProcessedEvent extends DomainEvent {
       insuredId: this.insuredId,
       occurredOn: this.occurredOn.toISOString(),
       processedAt: this.processedAt.toISOString(),
-      scheduleId: this.scheduleId
+      scheduleId: this.scheduleId,
+      status: 'processed'
     };
   }
 

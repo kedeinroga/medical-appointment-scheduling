@@ -44,6 +44,17 @@ Resources:
               - kms:Decrypt
               - kms:GenerateDataKey
             Resource: "*"
+          - Sid: Allow EventBridge service to use the key
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
