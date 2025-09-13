@@ -80,10 +80,17 @@ class MessageProcessor {
     const messageId = record.messageId;
 
     try {
-      // Parse SNS message
-      const snsMessage = JSON.parse(record.body);
-
-      const appointmentData = JSON.parse(snsMessage.Message);
+      // Parse message - handle both SNS wrapped and raw formats
+      const messageBody = JSON.parse(record.body);
+      
+      let appointmentData;
+      if (messageBody.Message) {
+        // SNS wrapped format
+        appointmentData = JSON.parse(messageBody.Message);
+      } else {
+        // Raw message format
+        appointmentData = messageBody;
+      }
 
       // Validate country
       if (appointmentData.countryISO !== 'PE') {
