@@ -37,7 +37,7 @@ describe('UseCaseFactory', () => {
 
       expect(CreateAppointmentUseCase).toHaveBeenCalledWith(
         expect.any(DynamoDBAppointmentRepository),
-        expect.any(EventBridgeAdapter),
+        expect.any(SNSAdapter),
         expect.any(MySQLScheduleRepository)
       );
       expect(result).toBe(mockUseCase);
@@ -52,7 +52,8 @@ describe('UseCaseFactory', () => {
       const result = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase();
 
       expect(GetAppointmentsByInsuredIdUseCase).toHaveBeenCalledWith(
-        expect.any(DynamoDBAppointmentRepository)
+        expect.any(DynamoDBAppointmentRepository),
+        expect.any(MySQLAppointmentRepository)
       );
       expect(result).toBe(mockUseCase);
     });

@@ -32,17 +32,19 @@ export class UseCaseFactory {
   public static createCreateAppointmentUseCase(): CreateAppointmentUseCase {
     return new CreateAppointmentUseCase(
       this.getAppointmentRepository(),
-      this.getEventBridgeAdapter(),
+      this.getSNSAdapter(),
       this.getScheduleRepository()
     );
   }
 
   /**
    * Creates a GetAppointmentsByInsuredIdUseCase with all dependencies injected
+   * Uses both DynamoDB and MySQL repositories to get complete appointment history
    */
   public static createGetAppointmentsByInsuredIdUseCase(): GetAppointmentsByInsuredIdUseCase {
     return new GetAppointmentsByInsuredIdUseCase(
-      this.getAppointmentRepository()
+      this.getAppointmentRepository(),
+      this.getMySQLAppointmentRepository()
     );
   }
 

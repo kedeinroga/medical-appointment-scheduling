@@ -4,7 +4,7 @@ import {
   AppointmentId, 
   CountryISO, 
   IAppointmentRepository, 
-  IEventBus,
+  IMessagingPort,
   IScheduleRepository, 
   Insured, 
   InsuredId 
@@ -22,7 +22,7 @@ const logger = new Logger({
 export class CreateAppointmentUseCase {
   constructor(
     private readonly appointmentRepository: IAppointmentRepository,
-    private readonly eventBus: IEventBus,
+    private readonly messagingPort: IMessagingPort,
     private readonly scheduleRepository: IScheduleRepository
   ) {}
 
@@ -59,15 +59,13 @@ export class CreateAppointmentUseCase {
       // Save to repository
       await this.appointmentRepository.save(appointment);
 
-      // Create and publish domain event
-      const appointmentCreatedEvent = new AppointmentCreatedEvent(
-        appointment.getAppointmentId().getValue(),
-        appointment.getCountryISO().getValue(),
-        appointment.getInsuredId().getValue(),
-        appointment.getScheduleId()
-      );
-
-      await this.eventBus.publish(appointmentCreatedEvent);
+      // Publish to SNS instead of EventBridge
+      await this.messagingPort.publishAppointmentCreated({
+        appointmentId: appointment.getAppointmentId().getValue(),
+        countryISO: appointment.getCountryISO().getValue(),
+        insuredId: appointment.getInsuredId().getValue(),
+        scheduleId: appointment.getScheduleId()
+      });
 
       logger.info('Appointment created successfully', {
         appointmentId: appointment.getAppointmentId().getValue(),

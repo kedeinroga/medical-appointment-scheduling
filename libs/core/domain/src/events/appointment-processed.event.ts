@@ -14,7 +14,7 @@ export class AppointmentProcessedEvent extends DomainEvent {
   }
 
   public eventName(): string {
-    return 'appointment.processed';
+    return 'Appointment Processed';
   }
 
   public toPrimitives(): {

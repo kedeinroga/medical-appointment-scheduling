@@ -1,24 +1,23 @@
-import { CountryISO, IAppointmentRepository, IScheduleRepository } from '@medical-appointment/core-domain';
+import { CountryISO, IAppointmentRepository, IScheduleRepository, IMessagingPort } from '@medical-appointment/core-domain';
 
 import { CreateAppointmentUseCase } from '../create-appointment.use-case';
-import { IEventBus } from '../../ports/event-bus.port';
 import { AppointmentTestFactory, ScheduleTestFactory, MockFactory } from '../../__tests__/test.factories';
 import { TEST_DATA } from '../../__tests__/test.constants';
 
 describe(CreateAppointmentUseCase.name, () => {
   let createAppointmentUseCase: CreateAppointmentUseCase;
   let mockAppointmentRepository: jest.Mocked<IAppointmentRepository>;
-  let mockEventBus: jest.Mocked<IEventBus>;
+  let mockMessagingPort: jest.Mocked<IMessagingPort>;
   let mockScheduleRepository: jest.Mocked<IScheduleRepository>;
 
   beforeEach(() => {
     mockAppointmentRepository = MockFactory.createAppointmentRepositoryMock();
-    mockEventBus = MockFactory.createEventBusMock();
+    mockMessagingPort = MockFactory.createMessagingPortMock();
     mockScheduleRepository = MockFactory.createScheduleRepositoryMock();
 
     createAppointmentUseCase = new CreateAppointmentUseCase(
       mockAppointmentRepository,
-      mockEventBus,
+      mockMessagingPort,
       mockScheduleRepository
     );
   });
@@ -31,7 +30,7 @@ describe(CreateAppointmentUseCase.name, () => {
 
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockEventBus.publish.mockResolvedValue(undefined);
+      mockMessagingPort.publishAppointmentCreated.mockResolvedValue(undefined);
 
       // Act
       const result = await createAppointmentUseCase.execute(dto);
@@ -45,7 +44,7 @@ describe(CreateAppointmentUseCase.name, () => {
         CountryISO.PERU
       );
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
-      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+      expect(mockMessagingPort.publishAppointmentCreated).toHaveBeenCalledTimes(1);
     });
 
     it('should create appointment successfully for CL country', async () => {
@@ -55,7 +54,7 @@ describe(CreateAppointmentUseCase.name, () => {
 
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockEventBus.publish.mockResolvedValue(undefined);
+      mockMessagingPort.publishAppointmentCreated.mockResolvedValue(undefined);
 
       // Act
       const result = await createAppointmentUseCase.execute(dto);
@@ -69,7 +68,7 @@ describe(CreateAppointmentUseCase.name, () => {
         CountryISO.CHILE
       );
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
-      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+      expect(mockMessagingPort.publishAppointmentCreated).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error for invalid insured ID', async () => {
@@ -116,17 +115,17 @@ describe(CreateAppointmentUseCase.name, () => {
       await expect(createAppointmentUseCase.execute(dto)).rejects.toThrow('Database connection failed');
     });
 
-    it('should handle event bus publish error gracefully', async () => {
+    it('should handle messaging port publish error gracefully', async () => {
       // Arrange
       const dto = AppointmentTestFactory.createPeruDto();
       const mockSchedule = ScheduleTestFactory.createPeruSchedule();
 
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockEventBus.publish.mockRejectedValue(new Error('Event bus unavailable'));
+      mockMessagingPort.publishAppointmentCreated.mockRejectedValue(new Error('SNS unavailable'));
 
       // Act & Assert
-      await expect(createAppointmentUseCase.execute(dto)).rejects.toThrow('Event bus unavailable');
+      await expect(createAppointmentUseCase.execute(dto)).rejects.toThrow('SNS unavailable');
     });
   });
 });

@@ -29,6 +29,8 @@ provider:
       Ref: AppointmentsPEQueue
     APPOINTMENTS_CL_QUEUE_URL:
       Ref: AppointmentsCLQueue
+    APPOINTMENTS_COMPLETION_QUEUE_URL:
+      Ref: AppointmentsCompletionQueue
     EVENTBRIDGE_BUS_NAME:
       Ref: MedicalAppointmentsEventBus
     # Use Parameter Store for configuration management

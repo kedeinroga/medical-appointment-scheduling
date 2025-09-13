@@ -46,7 +46,7 @@ describe('AppointmentProcessedEvent', () => {
       );
 
       // Act & Assert
-      expect(event.eventName()).toBe('appointment.processed');
+      expect(event.eventName()).toBe('Appointment Processed');
     });
   });
 
@@ -79,7 +79,7 @@ describe('AppointmentProcessedEvent', () => {
         appointmentId,
         countryISO,
         eventId,
-        eventName: 'appointment.processed',
+        eventName: 'Appointment Processed',
         insuredId,
         occurredOn: '2024-01-01T11:30:00.000Z',
         processedAt: '2024-01-01T11:00:00.000Z',

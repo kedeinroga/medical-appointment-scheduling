@@ -149,4 +149,15 @@ export class MockFactory {
       publish: jest.fn()
     };
   }
+
+  /**
+   * Creates a complete mock for IMessagingPort
+   */
+  static createMessagingPortMock() {
+    return {
+      publishAppointmentCreated: jest.fn(),
+      publishMessage: jest.fn(),
+      publishToCountrySpecificTopic: jest.fn()
+    };
+  }
 }

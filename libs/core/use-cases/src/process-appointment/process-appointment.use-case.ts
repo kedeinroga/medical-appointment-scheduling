@@ -5,7 +5,9 @@ import {
   CountryISO,
   IAppointmentRepository, 
   IEventBus,
-  IScheduleRepository
+  IScheduleRepository,
+  Insured,
+  InsuredId
 } from '@medical-appointment/core-domain';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { maskInsuredId } from '@medical-appointment/shared';
@@ -32,38 +34,51 @@ export class ProcessAppointmentUseCase {
     });
 
     try {
-      // Validate and get appointment
-      const appointmentId = AppointmentId.fromString(dto.appointmentId);
-      const appointment = await this.appointmentRepository.findByAppointmentId(appointmentId);
-      
-      if (!appointment) {
-        throw new Error(`Appointment with ID ${dto.appointmentId} not found`);
-      }
-
-      // Validate appointment is in pending status
-      if (!appointment.isPending()) {
-        throw new Error(`Appointment ${dto.appointmentId} is not in pending status`);
-      }
-
-      // Validate country matches
+      // Create value objects with validation
+      const insuredId = InsuredId.fromString(dto.insuredId);
       const countryISO = CountryISO.fromString(dto.countryISO);
-      if (!appointment.getCountryISO().equals(countryISO)) {
-        throw new Error(`Appointment country ${appointment.getCountryISO().getValue()} does not match processing country ${dto.countryISO}`);
+      const appointmentId = AppointmentId.fromString(dto.appointmentId);
+
+      // Get schedule from repository
+      const schedule = await this.scheduleRepository.findByScheduleId(dto.scheduleId, countryISO);
+      if (!schedule) {
+        throw new Error(`Schedule with ID ${dto.scheduleId} not found for country ${dto.countryISO}`);
       }
+
+      // Create insured entity
+      const insured = Insured.create({
+        countryISO,
+        insuredId
+      });
+
+      // Create appointment entity for MySQL storage
+      const appointment = Appointment.fromPrimitives({
+        appointmentId: dto.appointmentId,
+        insuredId: dto.insuredId,
+        countryISO: dto.countryISO,
+        schedule: {
+          scheduleId: dto.scheduleId,
+          centerId: schedule.getCenterId(),
+          specialtyId: schedule.getSpecialtyId(),
+          medicId: schedule.getMedicId(),
+          date: schedule.getDate()
+        },
+        status: 'processed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        processedAt: new Date()
+      });
 
       // Process country-specific logic
       await this.processCountrySpecificLogic(appointment, countryISO);
 
-      // Mark appointment as processed
-      appointment.markAsProcessed();
-
-      // Update appointment in repository
-      await this.appointmentRepository.update(appointment);
+      // Save appointment to MySQL (country-specific table)
+      await this.appointmentRepository.save(appointment);
 
       // Reserve the schedule slot
       await this.scheduleRepository.markAsReserved(dto.scheduleId, countryISO);
 
-      // Create and publish domain event
+      // Create and publish domain event to EventBridge for completion
       const appointmentProcessedEvent = new AppointmentProcessedEvent(
         appointment.getAppointmentId().getValue(),
         appointment.getCountryISO().getValue(),

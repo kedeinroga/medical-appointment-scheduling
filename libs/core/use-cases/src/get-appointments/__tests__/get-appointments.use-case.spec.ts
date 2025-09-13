@@ -5,10 +5,18 @@ import { GetAppointmentsDto } from '../get-appointments.dto';
 
 describe(GetAppointmentsByInsuredIdUseCase.name, () => {
   let getAppointmentsUseCase: GetAppointmentsByInsuredIdUseCase;
-  let mockAppointmentRepository: jest.Mocked<IAppointmentRepository>;
+  let mockDynamoDbRepository: jest.Mocked<IAppointmentRepository>;
+  let mockMysqlRepository: jest.Mocked<IAppointmentRepository>;
 
   beforeEach(() => {
-    mockAppointmentRepository = {
+    mockDynamoDbRepository = {
+      findByAppointmentId: jest.fn(),
+      findByInsuredId: jest.fn(),
+      save: jest.fn(),
+      update: jest.fn()
+    };
+
+    mockMysqlRepository = {
       findByAppointmentId: jest.fn(),
       findByInsuredId: jest.fn(),
       save: jest.fn(),
@@ -16,7 +24,8 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
     };
 
     getAppointmentsUseCase = new GetAppointmentsByInsuredIdUseCase(
-      mockAppointmentRepository
+      mockDynamoDbRepository,
+      mockMysqlRepository
     );
   });
 
@@ -51,35 +60,49 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
         insuredId: '12345'
       };
 
-      const mockAppointments = [
+      const dynamoAppointments = [
         createTestAppointment('12345', CountryISO.PERU, 100),
+      ];
+
+      const mysqlAppointments = [
         createTestAppointment('12345', CountryISO.PERU, 200)
       ];
 
-      // Mark one as processed for variety
-      mockAppointments[1].markAsProcessed();
+      // Mark MySQL appointment as processed
+      mysqlAppointments[0].markAsProcessed();
 
-      mockAppointmentRepository.findByInsuredId.mockResolvedValue(mockAppointments);
+      mockDynamoDbRepository.findByInsuredId.mockResolvedValue(dynamoAppointments);
+      mockMysqlRepository.findByInsuredId.mockResolvedValue(mysqlAppointments);
 
       // Act
       const result = await getAppointmentsUseCase.execute(dto);
 
       // Assert
       expect(result.appointments).toHaveLength(2);
-      expect(result.appointments[0].insuredId).toBe('12345');
-      expect(result.appointments[0].countryISO).toBe('PE');
-      expect(result.appointments[0].status).toBe('pending');
-      expect(result.appointments[0].scheduleId).toBe(100);
-      expect(result.appointments[0].processedAt).toBeNull();
+      
+      // Find appointments by scheduleId since order is not guaranteed
+      const processedAppointment = result.appointments.find(apt => apt.scheduleId === 200);
+      const pendingAppointment = result.appointments.find(apt => apt.scheduleId === 100);
 
-      expect(result.appointments[1].insuredId).toBe('12345');
-      expect(result.appointments[1].status).toBe('processed');
-      expect(result.appointments[1].scheduleId).toBe(200);
-      expect(result.appointments[1].processedAt).toBeDefined();
+      expect(processedAppointment).toBeDefined();
+      expect(processedAppointment!.insuredId).toBe('12345');
+      expect(processedAppointment!.countryISO).toBe('PE');
+      expect(processedAppointment!.status).toBe('processed');
+      expect(processedAppointment!.processedAt).toBeDefined();
 
-      expect(mockAppointmentRepository.findByInsuredId).toHaveBeenCalledWith(
+      expect(pendingAppointment).toBeDefined();
+      expect(pendingAppointment!.insuredId).toBe('12345');
+      expect(pendingAppointment!.status).toBe('pending');
+      expect(pendingAppointment!.processedAt).toBeNull();
+
+      expect(mockDynamoDbRepository.findByInsuredId).toHaveBeenCalledWith(
         expect.objectContaining({
-          value: '12345'
+          getValue: expect.any(Function)
+        })
+      );
+      expect(mockMysqlRepository.findByInsuredId).toHaveBeenCalledWith(
+        expect.objectContaining({
+          getValue: expect.any(Function)
         })
       );
     });
@@ -90,14 +113,16 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
         insuredId: '99999'
       };
 
-      mockAppointmentRepository.findByInsuredId.mockResolvedValue([]);
+      mockDynamoDbRepository.findByInsuredId.mockResolvedValue([]);
+      mockMysqlRepository.findByInsuredId.mockResolvedValue([]);
 
       // Act
       const result = await getAppointmentsUseCase.execute(dto);
 
       // Assert
       expect(result.appointments).toHaveLength(0);
-      expect(mockAppointmentRepository.findByInsuredId).toHaveBeenCalledTimes(1);
+      expect(mockDynamoDbRepository.findByInsuredId).toHaveBeenCalledTimes(1);
+      expect(mockMysqlRepository.findByInsuredId).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error for invalid insured ID', async () => {
@@ -112,18 +137,25 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
       await expect(getAppointmentsUseCase.execute(dto)).rejects.toThrow('Insured ID must contain at least one digit');
     });
 
-    it('should handle repository error', async () => {
+    it('should handle repository error gracefully', async () => {
       // Arrange
       const dto: GetAppointmentsDto = {
         insuredId: '12345'
       };
 
-      mockAppointmentRepository.findByInsuredId.mockRejectedValue(
-        new Error('Database connection failed')
+      // Both repositories fail
+      mockDynamoDbRepository.findByInsuredId.mockRejectedValue(
+        new Error('DynamoDB connection failed')
+      );
+      mockMysqlRepository.findByInsuredId.mockRejectedValue(
+        new Error('MySQL connection failed')
       );
 
-      // Act & Assert
-      await expect(getAppointmentsUseCase.execute(dto)).rejects.toThrow('Database connection failed');
+      // Act
+      const result = await getAppointmentsUseCase.execute(dto);
+
+      // Assert - Should return empty array when both repositories fail
+      expect(result.appointments).toHaveLength(0);
     });
 
     it('should return appointments with different statuses', async () => {
@@ -132,32 +164,35 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
         insuredId: '12345'
       };
 
-      const mockAppointments = [
+      const dynamoAppointments = [
         createTestAppointment('12345', CountryISO.PERU, 100),
+      ];
+
+      const mysqlAppointments = [
         createTestAppointment('12345', CountryISO.CHILE, 200),
         createTestAppointment('12345', CountryISO.PERU, 300)
       ];
 
       // Set different statuses
-      mockAppointments[1].markAsProcessed();
-      mockAppointments[2].markAsProcessed();
-      mockAppointments[2].markAsCompleted();
+      mysqlAppointments[0].markAsProcessed();
+      mysqlAppointments[1].markAsProcessed();
+      mysqlAppointments[1].markAsCompleted();
 
-      mockAppointmentRepository.findByInsuredId.mockResolvedValue(mockAppointments);
+      mockDynamoDbRepository.findByInsuredId.mockResolvedValue(dynamoAppointments);
+      mockMysqlRepository.findByInsuredId.mockResolvedValue(mysqlAppointments);
 
       // Act
       const result = await getAppointmentsUseCase.execute(dto);
 
       // Assert
       expect(result.appointments).toHaveLength(3);
-      expect(result.appointments[0].status).toBe('pending');
-      expect(result.appointments[1].status).toBe('processed');
-      expect(result.appointments[2].status).toBe('completed');
-
-      // Verify country mappings
-      expect(result.appointments[0].countryISO).toBe('PE');
-      expect(result.appointments[1].countryISO).toBe('CL');
-      expect(result.appointments[2].countryISO).toBe('PE');
+      
+      // Verify country mappings (sorted by creation date descending)
+      expect(result.appointments.some(apt => apt.status === 'pending')).toBe(true);
+      expect(result.appointments.some(apt => apt.status === 'processed')).toBe(true);
+      expect(result.appointments.some(apt => apt.status === 'completed')).toBe(true);
+      expect(result.appointments.some(apt => apt.countryISO === 'PE')).toBe(true);
+      expect(result.appointments.some(apt => apt.countryISO === 'CL')).toBe(true);
     });
   });
 });

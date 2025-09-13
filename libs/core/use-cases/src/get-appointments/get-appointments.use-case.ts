@@ -11,7 +11,8 @@ const logger = new Logger({
 
 export class GetAppointmentsByInsuredIdUseCase {
   constructor(
-    private readonly appointmentRepository: IAppointmentRepository
+    private readonly dynamoDbRepository: IAppointmentRepository,
+    private readonly mysqlRepository: IAppointmentRepository
   ) {}
 
   async execute(dto: GetAppointmentsDto): Promise<GetAppointmentsResponseDto> {
@@ -23,24 +24,60 @@ export class GetAppointmentsByInsuredIdUseCase {
       // Validate insured ID - this will throw if invalid
       const insuredId = InsuredId.fromString(dto.insuredId);
 
-      // Get appointments from repository
-      const appointments = await this.appointmentRepository.findByInsuredId(insuredId);
+      // Get appointments from both repositories in parallel
+      const [dynamoAppointments, mysqlAppointments] = await Promise.all([
+        this.dynamoDbRepository.findByInsuredId(insuredId).catch(error => {
+          logger.warn('Failed to get appointments from DynamoDB', {
+            error: error.message,
+            insuredId: maskInsuredId(dto.insuredId)
+          });
+          return [];
+        }),
+        this.mysqlRepository.findByInsuredId(insuredId).catch(error => {
+          logger.warn('Failed to get appointments from MySQL', {
+            error: error.message,
+            insuredId: maskInsuredId(dto.insuredId)
+          });
+          return [];
+        })
+      ]);
 
-      // Transform to DTOs - appointments could be empty array but not undefined
-      const appointmentDtos: AppointmentSummaryDto[] = appointments.map(appointment => ({
-        appointmentId: appointment.getAppointmentId().getValue(),
-        countryISO: appointment.getCountryISO().getValue(),
-        createdAt: appointment.getCreatedAt().toISOString(),
-        insuredId: appointment.getInsuredId().getValue(),
-        processedAt: appointment.getProcessedAt()?.toISOString() || null,
-        scheduleId: appointment.getScheduleId(),
-        status: appointment.getStatus().getValue(),
-        updatedAt: appointment.getUpdatedAt().toISOString()
-      }));
+      // Combine appointments from both sources
+      const allAppointments = [...dynamoAppointments, ...mysqlAppointments];
+
+      // Remove duplicates based on appointmentId and keep the most recent version
+      const uniqueAppointments = this.removeDuplicateAppointments(allAppointments);
+
+      // Sort by creation date (most recent first)
+      uniqueAppointments.sort((a, b) => b.getCreatedAt().getTime() - a.getCreatedAt().getTime());
+
+      // Transform to DTOs
+      const appointmentDtos: AppointmentSummaryDto[] = uniqueAppointments.map(appointment => {
+        const schedule = appointment.getSchedule();
+        return {
+          appointmentId: appointment.getAppointmentId().getValue(),
+          countryISO: appointment.getCountryISO().getValue(),
+          createdAt: appointment.getCreatedAt().toISOString(),
+          insuredId: appointment.getInsuredId().getValue(),
+          processedAt: appointment.getProcessedAt()?.toISOString() || null,
+          schedule: schedule ? {
+            centerId: schedule.getCenterId(),
+            date: schedule.getDate().toISOString(),
+            medicId: schedule.getMedicId(),
+            specialtyId: schedule.getSpecialtyId()
+          } : undefined,
+          scheduleId: appointment.getScheduleId(),
+          status: appointment.getStatus().getValue(),
+          updatedAt: appointment.getUpdatedAt().toISOString()
+        };
+      });
 
       logger.info('Appointments retrieved successfully', {
         appointmentsCount: appointmentDtos.length,
-        insuredId: maskInsuredId(dto.insuredId)
+        dynamoCount: dynamoAppointments.length,
+        insuredId: maskInsuredId(dto.insuredId),
+        mysqlCount: mysqlAppointments.length,
+        totalUniqueCount: uniqueAppointments.length
       });
 
       return {
@@ -53,5 +90,20 @@ export class GetAppointmentsByInsuredIdUseCase {
       });
       throw error;
     }
+  }
+
+  private removeDuplicateAppointments(appointments: any[]): any[] {
+    const appointmentMap = new Map();
+
+    appointments.forEach(appointment => {
+      const id = appointment.getAppointmentId().getValue();
+      const existing = appointmentMap.get(id);
+
+      if (!existing || appointment.getUpdatedAt().getTime() > existing.getUpdatedAt().getTime()) {
+        appointmentMap.set(id, appointment);
+      }
+    });
+
+    return Array.from(appointmentMap.values());
   }
 }
