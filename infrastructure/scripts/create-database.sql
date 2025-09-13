@@ -2,8 +2,8 @@
 -- This script creates the database structure for both Peru (PE) and Chile (CL)
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS medical_appointments;
-USE medical_appointments;
+CREATE DATABASE IF NOT EXISTS medical_appointments_dev;
+USE medical_appointments_dev;
 
 -- Table for Peru appointments
 CREATE TABLE IF NOT EXISTS appointments_pe (
