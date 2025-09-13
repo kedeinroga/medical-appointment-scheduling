@@ -100,6 +100,12 @@ provider:
             - rds-data:ExecuteStatement
             - rds-data:BatchExecuteStatement
           Resource: "*"
+        - Effect: Allow
+          Action:
+            - kms:Decrypt
+            - kms:GenerateDataKey
+          Resource:
+            - Fn::ImportValue: ${self:service}-${self:provider.stage}-sqs-kms-key-arn
 
 plugins:
   - serverless-esbuild
