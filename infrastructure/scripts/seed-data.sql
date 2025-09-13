@@ -1,7 +1,7 @@
 -- Seed data for Medical Appointment Scheduling
 -- This script inserts sample data for testing
 
-USE medical_appointments;
+USE medical_appointments_dev;
 
 -- Insert medical centers
 INSERT INTO medical_centers (name, address, phone, country_iso) VALUES

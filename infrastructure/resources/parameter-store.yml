@@ -5,7 +5,7 @@ Resources:
     Properties:
       Name: /medical-appointment/${self:provider.stage}/rds/database
       Type: String
-      Value: medical_appointments
+      Value: medical_appointments_${self:provider.stage}
       Description: Database name for Medical Appointment
       Tags:
         Service: medical-appointment-scheduling

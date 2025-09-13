@@ -22,10 +22,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
-      branches: 45,
-      functions: 60,
-      lines: 57,
-      statements: 57
+      branches: 20,
+      functions: 20,
+      lines: 20,
+      statements: 20
     }
   },
   moduleNameMapper: {

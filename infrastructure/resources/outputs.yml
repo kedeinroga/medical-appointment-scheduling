@@ -25,7 +25,7 @@ Outputs:
 
   DatabaseName:
     Description: Database name
-    Value: medical_appointments
+    Value: medical_appointments_${self:provider.stage}
     Export:
       Name: ${self:service}-${self:provider.stage}-database-name
 
