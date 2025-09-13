@@ -11,7 +11,19 @@ jest.mock('@aws-sdk/client-sqs');
 jest.mock('@aws-sdk/client-eventbridge');
 jest.mock('@aws-sdk/client-rds');
 
+// Mock database connections to prevent real database access during tests
+jest.mock('mysql2/promise', () => ({
+  createPool: jest.fn(() => ({
+    getConnection: jest.fn(() => Promise.resolve({
+      execute: jest.fn(() => Promise.resolve([[], {}])),
+      release: jest.fn()
+    })),
+    end: jest.fn(() => Promise.resolve())
+  }))
+}));
+
 // Set test environment variables
+process.env.NODE_ENV = 'test';
 process.env.STAGE = 'test';
 process.env.AWS_REGION = 'us-east-1';
 process.env.APPOINTMENTS_TABLE_NAME = 'test-appointments-table';

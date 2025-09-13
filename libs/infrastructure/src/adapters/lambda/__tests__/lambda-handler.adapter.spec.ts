@@ -8,6 +8,9 @@ import { UseCaseFactory } from '../../../factories/use-case.factory';
 // Mock dependencies
 jest.mock('@aws-lambda-powertools/logger');
 jest.mock('../../../factories/use-case.factory');
+jest.mock('../../../adapters/repositories/mysql-appointment.repository');
+jest.mock('../../../adapters/repositories/mysql-schedule.repository');
+jest.mock('../../../adapters/repositories/dynamodb-appointment.repository');
 
 describe('LambdaHandlerAdapter', () => {
   let adapter: LambdaHandlerAdapter;
@@ -28,8 +31,23 @@ describe('LambdaHandlerAdapter', () => {
 
     (Logger as jest.MockedClass<typeof Logger>).mockImplementation(() => mockLogger);
 
-    // Mock UseCaseFactory
-    mockUseCaseFactory = UseCaseFactory as jest.Mocked<typeof UseCaseFactory>;
+    // Mock UseCaseFactory with all methods
+    mockUseCaseFactory = {
+      createCreateAppointmentUseCase: jest.fn(),
+      createGetAppointmentsByInsuredIdUseCase: jest.fn(),
+      createProcessAppointmentUseCase: jest.fn(),
+      createCompleteAppointmentUseCase: jest.fn(),
+      getAppointmentRepository: jest.fn(),
+      getMySQLAppointmentRepository: jest.fn(),
+      getScheduleRepository: jest.fn(),
+      getSNSAdapter: jest.fn(),
+      getSQSAdapter: jest.fn(),
+      getEventBridgeAdapter: jest.fn(),
+      reset: jest.fn()
+    } as any;
+
+    // Replace the imported UseCaseFactory with our mock
+    (UseCaseFactory as jest.Mocked<typeof UseCaseFactory>) = mockUseCaseFactory;
 
     adapter = new LambdaHandlerAdapter();
   });
