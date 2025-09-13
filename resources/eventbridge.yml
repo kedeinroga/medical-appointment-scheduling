@@ -6,7 +6,6 @@ Resources:
     Properties:
       Name: medical-appointment-scheduling-${self:provider.stage}
       Description: "Custom event bus for medical appointment processing events"
-      KmsKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -37,6 +36,7 @@ Resources:
       Targets:
         - Arn: !GetAtt AppointmentsCompletionQueue.Arn
           Id: "AppointmentProcessedPETarget"
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
 
   # Rule for Chile appointment processed events
   AppointmentProcessedCLRule:
@@ -58,6 +58,7 @@ Resources:
       Targets:
         - Arn: !GetAtt AppointmentsCompletionQueue.Arn
           Id: "AppointmentProcessedCLTarget"
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
 
   # Rule for appointment processing errors
   AppointmentProcessingErrorRule:
@@ -77,6 +78,7 @@ Resources:
       Targets:
         - Arn: !GetAtt AppointmentsCompletionQueue.Arn
           Id: "AppointmentProcessingErrorTarget"
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
 
   # IAM Role for EventBridge to send messages to SQS
   EventBridgeExecutionRole:
