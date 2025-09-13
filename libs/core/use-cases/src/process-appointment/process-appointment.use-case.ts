@@ -16,7 +16,7 @@ import { ProcessAppointmentDto, ProcessAppointmentResponseDto } from './process-
 
 const logger = new Logger({
   logLevel: 'INFO',
-  serviceName: 'medical-appointment-scheduling'
+  serviceName: 'process-appointment-use-case'
 });
 
 export class ProcessAppointmentUseCase {
@@ -51,8 +51,20 @@ export class ProcessAppointmentUseCase {
         insuredId
       });
 
-      // Create appointment entity for MySQL storage
-      const appointment = Appointment.fromPrimitives({
+      // Get the original appointment from DynamoDB to update its status
+      const originalAppointment = await this.appointmentRepository.findByAppointmentId(appointmentId);
+      if (!originalAppointment) {
+        throw new Error(`Appointment with ID ${dto.appointmentId} not found in DynamoDB`);
+      }
+
+      // Mark appointment as processed (changes status from pending to processed)
+      originalAppointment.markAsProcessed();
+
+      // Update appointment in DynamoDB with new status
+      await this.appointmentRepository.update(originalAppointment);
+
+      // Create appointment entity for MySQL storage (country-specific)
+      const countryAppointment = Appointment.fromPrimitives({
         appointmentId: dto.appointmentId,
         insuredId: dto.insuredId,
         countryISO: dto.countryISO,
@@ -70,21 +82,21 @@ export class ProcessAppointmentUseCase {
       });
 
       // Process country-specific logic
-      await this.processCountrySpecificLogic(appointment, countryISO);
+      await this.processCountrySpecificLogic(countryAppointment, countryISO);
 
       // Save appointment to MySQL (country-specific table)
-      await this.appointmentRepository.save(appointment);
+      await this.appointmentRepository.save(countryAppointment);
 
       // Reserve the schedule slot
       await this.scheduleRepository.markAsReserved(dto.scheduleId, countryISO);
 
       // Create and publish domain event to EventBridge for completion
       const appointmentProcessedEvent = new AppointmentProcessedEvent(
-        appointment.getAppointmentId().getValue(),
-        appointment.getCountryISO().getValue(),
-        appointment.getInsuredId().getValue(),
-        appointment.getProcessedAt()!,
-        appointment.getScheduleId()
+        originalAppointment.getAppointmentId().getValue(),
+        originalAppointment.getCountryISO().getValue(),
+        originalAppointment.getInsuredId().getValue(),
+        originalAppointment.getProcessedAt()!,
+        originalAppointment.getScheduleId()
       );
 
       await this.eventBus.publish(appointmentProcessedEvent);
@@ -113,21 +125,21 @@ export class ProcessAppointmentUseCase {
     }
   }
 
-  private async processCountrySpecificLogic(appointment: any, countryISO: CountryISO): Promise<void> {
+  private async processCountrySpecificLogic(countryAppointment: any, countryISO: CountryISO): Promise<void> {
     // This method implements country-specific business logic
     // In a real implementation, this would contain different logic for PE vs CL
     
     if (countryISO.isPeru()) {
-      await this.processPeruAppointment(appointment);
+      await this.processPeruAppointment(countryAppointment);
     } else if (countryISO.isChile()) {
-      await this.processChileAppointment(appointment);
+      await this.processChileAppointment(countryAppointment);
     }
   }
 
-  private async processPeruAppointment(appointment: any): Promise<void> {
+  private async processPeruAppointment(countryAppointment: any): Promise<void> {
     // Peru-specific processing logic
     logger.info('Processing appointment for Peru', {
-      appointmentId: appointment.getAppointmentId().getValue()
+      appointmentId: countryAppointment.getAppointmentId().getValue()
     });
     
     // Simulate Peru-specific business rules
@@ -135,10 +147,10 @@ export class ProcessAppointmentUseCase {
     await this.simulateExternalValidation('Peru');
   }
 
-  private async processChileAppointment(appointment: any): Promise<void> {
+  private async processChileAppointment(countryAppointment: any): Promise<void> {
     // Chile-specific processing logic
     logger.info('Processing appointment for Chile', {
-      appointmentId: appointment.getAppointmentId().getValue()
+      appointmentId: countryAppointment.getAppointmentId().getValue()
     });
     
     // Simulate Chile-specific business rules

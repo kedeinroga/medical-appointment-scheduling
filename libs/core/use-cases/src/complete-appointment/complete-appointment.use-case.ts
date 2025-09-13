@@ -14,7 +14,7 @@ import { CompleteAppointmentDto, CompleteAppointmentResponseDto } from './comple
 
 const logger = new Logger({
   logLevel: 'INFO',
-  serviceName: 'medical-appointment-scheduling'
+  serviceName: 'complete-appointment-use-case'
 });
 
 export class CompleteAppointmentUseCase {

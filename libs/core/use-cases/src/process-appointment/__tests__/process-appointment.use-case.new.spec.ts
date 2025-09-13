@@ -54,8 +54,27 @@ describe(ProcessAppointmentUseCase.name, () => {
         specialtyId: 1
       });
 
+      // Create mock appointment in pending status (from DynamoDB)
+      const mockOriginalAppointment = Appointment.fromPrimitives({
+        appointmentId: dto.appointmentId,
+        insuredId: dto.insuredId,
+        countryISO: dto.countryISO,
+        schedule: {
+          scheduleId: dto.scheduleId,
+          centerId: 1,
+          specialtyId: 1,
+          medicId: 1,
+          date: new Date('2025-12-01T10:00:00Z')
+        },
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(mockOriginalAppointment);
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
+      mockAppointmentRepository.update.mockResolvedValue(undefined);
       mockScheduleRepository.markAsReserved.mockResolvedValue(undefined);
       mockEventBus.publish.mockResolvedValue(undefined);
 
@@ -68,6 +87,8 @@ describe(ProcessAppointmentUseCase.name, () => {
       expect(result.status).toBe('processed');
       expect(result.message).toBe('Appointment processed successfully for PE');
 
+      expect(mockAppointmentRepository.findByAppointmentId).toHaveBeenCalledWith(AppointmentId.fromString(dto.appointmentId));
+      expect(mockAppointmentRepository.update).toHaveBeenCalledTimes(1);
       expect(mockScheduleRepository.findByScheduleId).toHaveBeenCalledWith(100, CountryISO.PERU);
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
       expect(mockScheduleRepository.markAsReserved).toHaveBeenCalledWith(100, CountryISO.PERU);
@@ -91,8 +112,27 @@ describe(ProcessAppointmentUseCase.name, () => {
         specialtyId: 2
       });
 
+      // Create mock appointment in pending status (from DynamoDB)
+      const mockOriginalAppointment = Appointment.fromPrimitives({
+        appointmentId: dto.appointmentId,
+        insuredId: dto.insuredId,
+        countryISO: dto.countryISO,
+        schedule: {
+          scheduleId: dto.scheduleId,
+          centerId: 2,
+          specialtyId: 2,
+          medicId: 2,
+          date: new Date('2025-12-01T14:00:00Z')
+        },
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(mockOriginalAppointment);
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
+      mockAppointmentRepository.update.mockResolvedValue(undefined);
       mockScheduleRepository.markAsReserved.mockResolvedValue(undefined);
       mockEventBus.publish.mockResolvedValue(undefined);
 
@@ -105,6 +145,8 @@ describe(ProcessAppointmentUseCase.name, () => {
       expect(result.status).toBe('processed');
       expect(result.message).toBe('Appointment processed successfully for CL');
 
+      expect(mockAppointmentRepository.findByAppointmentId).toHaveBeenCalledWith(AppointmentId.fromString(dto.appointmentId));
+      expect(mockAppointmentRepository.update).toHaveBeenCalledTimes(1);
       expect(mockScheduleRepository.findByScheduleId).toHaveBeenCalledWith(200, CountryISO.CHILE);
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
       expect(mockScheduleRepository.markAsReserved).toHaveBeenCalledWith(200, CountryISO.CHILE);
@@ -120,6 +162,24 @@ describe(ProcessAppointmentUseCase.name, () => {
         scheduleId: 100
       };
 
+      // Mock original appointment found, but schedule not found
+      const mockOriginalAppointment = Appointment.fromPrimitives({
+        appointmentId: dto.appointmentId,
+        insuredId: dto.insuredId,
+        countryISO: dto.countryISO,
+        schedule: {
+          scheduleId: dto.scheduleId,
+          centerId: 1,
+          specialtyId: 1,
+          medicId: 1,
+          date: new Date('2025-12-01T10:00:00Z')
+        },
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(mockOriginalAppointment);
       mockScheduleRepository.findByScheduleId.mockResolvedValue(null);
 
       // Act & Assert
@@ -145,7 +205,26 @@ describe(ProcessAppointmentUseCase.name, () => {
         specialtyId: 1
       });
 
+      // Mock original appointment found
+      const mockOriginalAppointment = Appointment.fromPrimitives({
+        appointmentId: dto.appointmentId,
+        insuredId: dto.insuredId,
+        countryISO: dto.countryISO,
+        schedule: {
+          scheduleId: dto.scheduleId,
+          centerId: 1,
+          specialtyId: 1,
+          medicId: 1,
+          date: new Date('2025-12-01T10:00:00Z')
+        },
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(mockOriginalAppointment);
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
+      mockAppointmentRepository.update.mockResolvedValue(undefined);
       mockAppointmentRepository.save.mockRejectedValue(new Error('Database save failed'));
 
       // Act & Assert
@@ -169,7 +248,26 @@ describe(ProcessAppointmentUseCase.name, () => {
         specialtyId: 1
       });
 
+      // Mock original appointment found
+      const mockOriginalAppointment = Appointment.fromPrimitives({
+        appointmentId: dto.appointmentId,
+        insuredId: dto.insuredId,
+        countryISO: dto.countryISO,
+        schedule: {
+          scheduleId: dto.scheduleId,
+          centerId: 1,
+          specialtyId: 1,
+          medicId: 1,
+          date: new Date('2025-12-01T10:00:00Z')
+        },
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(mockOriginalAppointment);
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
+      mockAppointmentRepository.update.mockResolvedValue(undefined);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
       mockScheduleRepository.markAsReserved.mockRejectedValue(new Error('Schedule already reserved'));
 
