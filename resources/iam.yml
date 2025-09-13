@@ -83,6 +83,14 @@ Resources:
                   - kms:CreateGrant
                 Resource:
                   - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}"
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                  - kms:CreateGrant
+                  - kms:DescribeKey
+                Resource:
+                  - !GetAtt SQSKMSKeyPolicy.Arn
         - PolicyName: MedicalAppointmentSSMPolicy
           PolicyDocument:
             Version: "2012-10-17"

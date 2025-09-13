@@ -29,6 +29,7 @@ logging:
 security:
   encryption:
     kmsKeyId: alias/aws/dynamodb
+    sqsKmsKeyId: alias/medical-appointment-sqs-dev
   cors:
     allowOrigin: "*"
     allowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"

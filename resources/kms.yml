@@ -1,0 +1,79 @@
+# KMS Key Policy for SQS queues to allow SNS access
+Resources:
+  # KMS Key Policy for SQS encryption that allows SNS access
+  SQSKMSKeyPolicy:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "KMS Key for SQS queues with SNS access in medical appointment scheduling"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Enable IAM policies
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: Allow SNS service to use the key
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+          - Sid: Allow SQS service to use the key
+            Effect: Allow
+            Principal:
+              Service: sqs.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+          - Sid: Allow Lambda execution role to use the key
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt MedicalAppointmentLambdaExecutionRole.Arn
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Purpose
+          Value: sqs-encryption
+
+  # KMS Key Alias for easier reference
+  SQSKMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/medical-appointment-sqs-${self:provider.stage}
+      TargetKeyId: !Ref SQSKMSKeyPolicy
+
+Outputs:
+  SQSKMSKeyId:
+    Description: "KMS Key ID for SQS encryption"
+    Value: !Ref SQSKMSKeyPolicy
+    Export:
+      Name: ${self:service}-${self:provider.stage}-sqs-kms-key-id
+
+  SQSKMSKeyArn:
+    Description: "KMS Key ARN for SQS encryption"
+    Value: !GetAtt SQSKMSKeyPolicy.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-sqs-kms-key-arn
+
+  SQSKMSKeyAlias:
+    Description: "KMS Key Alias for SQS encryption"
+    Value: !Ref SQSKMSKeyAlias
+    Export:
+      Name: ${self:service}-${self:provider.stage}-sqs-kms-key-alias

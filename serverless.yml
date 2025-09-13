@@ -186,6 +186,7 @@ functions:
 
 # Infrastructure as Code - Import resource definitions
 resources:
+  - ${file(resources/kms.yml)}
   - ${file(resources/dynamodb.yml)}
   - ${file(resources/sns.yml)}
   - ${file(resources/sqs.yml)}
