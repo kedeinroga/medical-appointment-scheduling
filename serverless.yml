@@ -100,6 +100,12 @@ provider:
             - rds-data:ExecuteStatement
             - rds-data:BatchExecuteStatement
           Resource: "*"
+        - Effect: Allow
+          Action:
+            - kms:Decrypt
+            - kms:GenerateDataKey
+          Resource:
+            - Fn::Sub: "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/medical-appointment-sqs-${self:provider.stage}"
 
 plugins:
   - serverless-esbuild
