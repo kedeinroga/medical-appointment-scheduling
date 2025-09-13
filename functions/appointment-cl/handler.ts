@@ -80,30 +80,10 @@ class MessageProcessor {
     const messageId = record.messageId;
 
     try {
-      // Debug: Log the raw record
-      console.log('Processing SQS record:', {
-        messageId,
-        body: record.body,
-        messageAttributes: record.messageAttributes
-      });
-
       // Parse SNS message
       const snsMessage = JSON.parse(record.body);
-      
-      // Debug: Log parsed SNS message
-      console.log('Parsed SNS message:', {
-        messageId,
-        snsMessage: snsMessage,
-        messageContent: snsMessage.Message
-      });
 
       const appointmentData = JSON.parse(snsMessage.Message);
-
-      // Debug: Log appointment data
-      console.log('Parsed appointment data:', {
-        messageId,
-        appointmentData
-      });
 
       // Validate country
       if (appointmentData.countryISO !== 'CL') {
