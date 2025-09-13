@@ -1,28 +1,28 @@
 Resources:
-  # RDS Security Group - Temporarily disabled due to VPC configuration issues
-  # RDSSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     GroupDescription: Security group for Medical Appointment RDS instance
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: 3306
-  #         ToPort: 3306
-  #         CidrIp: 0.0.0.0/0
-  #         Description: Allow MySQL access (development only)
-  #     Tags:
-  #       - Key: Name
-  #         Value: medical-appointment-rds-sg-${self:provider.stage}
-  #       - Key: Service
-  #         Value: medical-appointment-scheduling
-  #       - Key: Stage
-  #         Value: ${self:provider.stage}
+  # RDS Security Group - Re-enabled now that EC2 permissions are working
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Medical Appointment RDS instance
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+          Description: Allow MySQL access (development only)
+      Tags:
+        - Key: Name
+          Value: medical-appointment-rds-sg-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
 
   # RDS Master Password Secret
   RDSMasterSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: medical-appointment-rds-${self:provider.stage}
+      Name: medical-appointment-rds-v2-${self:provider.stage}
       Description: Master password for Medical Appointment RDS instance
       GenerateSecretString:
         SecretStringTemplate: '{"username": "admin"}'
@@ -40,22 +40,21 @@ Resources:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
     Properties:
-      DBInstanceIdentifier: medical-appointments-db-${self:provider.stage}
+      DBInstanceIdentifier: medical-appointments-db-v2-${self:provider.stage}
       DBInstanceClass: db.t3.micro
       Engine: mysql
       EngineVersion: "8.0"
       MasterUsername: admin
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:medical-appointment-rds-v2-${self:provider.stage}:SecretString:password}}"
       AllocatedStorage: 20
       MaxAllocatedStorage: 100
       StorageType: gp2
       StorageEncrypted: true
       
-      # Network Configuration - Publicly accessible for development  
+      # Network Configuration - Publicly accessible for development
       PubliclyAccessible: true
-      # Use default security group for simplicity
-      # VPCSecurityGroups:
-      #   - !Ref RDSSecurityGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
       
       # Backup Configuration
       BackupRetentionPeriod: 1
@@ -68,7 +67,7 @@ Resources:
       
       Tags:
         - Key: Name
-          Value: medical-appointments-db-${self:provider.stage}
+          Value: medical-appointments-db-v2-${self:provider.stage}
         - Key: Service
           Value: medical-appointment-scheduling
         - Key: Stage
