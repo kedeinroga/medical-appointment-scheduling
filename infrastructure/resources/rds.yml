@@ -1,5 +1,5 @@
 Resources:
-  # RDS Security Group - Re-enabled now that EC2 permissions are working
+  # RDS Security Group - Allow MySQL access from anywhere (for development)
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -22,7 +22,7 @@ Resources:
   RDSMasterSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: medical-appointment-rds-v2-${self:provider.stage}
+      Name: medical-appointment-rds-${self:provider.stage}
       Description: Master password for Medical Appointment RDS instance
       GenerateSecretString:
         SecretStringTemplate: '{"username": "admin"}'
@@ -35,23 +35,23 @@ Resources:
         - Key: Stage
           Value: ${self:provider.stage}
 
-  # RDS Instance - Publicly accessible for development
+  # RDS Instance - Fresh deployment with Security Group from the start
   RDSInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
     Properties:
-      DBInstanceIdentifier: medical-appointments-db-v2-${self:provider.stage}
+      DBInstanceIdentifier: medical-appointments-db-${self:provider.stage}
       DBInstanceClass: db.t3.micro
       Engine: mysql
       EngineVersion: "8.0"
       MasterUsername: admin
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:medical-appointment-rds-v2-${self:provider.stage}:SecretString:password}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
       AllocatedStorage: 20
       MaxAllocatedStorage: 100
       StorageType: gp2
       StorageEncrypted: true
       
-      # Network Configuration - Publicly accessible for development
+      # Network Configuration - Publicly accessible with Security Group
       PubliclyAccessible: true
       VPCSecurityGroups:
         - !Ref RDSSecurityGroup
@@ -67,7 +67,7 @@ Resources:
       
       Tags:
         - Key: Name
-          Value: medical-appointments-db-v2-${self:provider.stage}
+          Value: medical-appointments-db-${self:provider.stage}
         - Key: Service
           Value: medical-appointment-scheduling
         - Key: Stage

@@ -53,7 +53,7 @@ Resources:
     Properties:
       Name: /medical-appointment/${self:provider.stage}/rds/password
       Type: String
-      Value: !Sub "{{resolve:secretsmanager:medical-appointment-rds-v2-${self:provider.stage}:SecretString:password}}"
+      Value: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
       Description: Database password for Medical Appointment (from Secrets Manager)
       Tags:
         Service: medical-appointment-scheduling
