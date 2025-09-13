@@ -15,8 +15,6 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "@medical-appointment/core-domain": "file:../domain",
-    "@medical-appointment/shared": "file:../../shared",
     "zod": "^3.23.8"
   }
 }

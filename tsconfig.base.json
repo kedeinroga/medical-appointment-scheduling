@@ -1,45 +1,35 @@
 {
+  "compileOnSave": false,
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
     "lib": ["ES2022"],
-    "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "removeComments": false,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "noEmit": true,
+    "baseUrl": ".",
     "paths": {
-      "@medical-appointment/core-domain": ["./libs/core/domain/src"],
-      "@medical-appointment/core-use-cases": ["./libs/core/use-cases/src"],
-      "@medical-appointment/shared": ["./libs/shared/src"],
-      "@medical-appointment/infrastructure": ["./libs/infrastructure/src"]
+      "@medical-appointment/core-domain": ["libs/core/domain/src/index.ts"],
+      "@medical-appointment/core-use-cases": ["libs/core/use-cases/src/index.ts"],
+      "@medical-appointment/shared": ["libs/shared/src/index.ts"],
+      "@medical-appointment/infrastructure": ["libs/infrastructure/src/index.ts"]
     }
   },
-  "include": [
-    "functions/**/*",
-    "libs/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  "exclude": ["node_modules", "dist", "tmp"]
 }

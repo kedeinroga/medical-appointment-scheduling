@@ -9,10 +9,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "aws-lambda": "^1.0.7",
-    "@medical-appointment/core-use-cases": "file:../../libs/core/use-cases",
-    "@medical-appointment/infrastructure": "file:../../libs/infrastructure",
-    "@medical-appointment/shared": "file:../../libs/shared"
+    "aws-lambda": "^1.0.7"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.119",

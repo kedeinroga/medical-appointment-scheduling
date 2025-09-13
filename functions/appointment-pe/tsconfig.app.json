@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/functions/appointment-pe",
+    "module": "commonjs",
+    "types": ["node"],
+    "target": "ES2022",
+    "noEmit": false
+  },
+  "exclude": ["jest.config.js", "**/*.spec.ts", "**/*.test.ts", "__tests__/**/*"],
+  "include": ["*.ts", "src/**/*.ts"]
+}

@@ -9,9 +9,6 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@medical-appointment/core-use-cases": "file:../../libs/core/use-cases",
-    "@medical-appointment/infrastructure": "file:../../libs/infrastructure",
-    "@medical-appointment/shared": "file:../../libs/shared",
     "aws-lambda": "^1.0.7",
     "zod": "^3.23.8"
   },

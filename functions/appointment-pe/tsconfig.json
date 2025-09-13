@@ -1,15 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@medical-appointment/core-domain": ["../../libs/core/domain/src"],
-      "@medical-appointment/core-use-cases": ["../../libs/core/use-cases/src"],
-      "@medical-appointment/shared": ["../../libs/shared/src"],
-      "@medical-appointment/infrastructure": ["../../libs/infrastructure/src"]
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
     }
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/__tests__/**"]
+  ],
+  "compilerOptions": {
+    "esModuleInterop": true
+  }
 }
