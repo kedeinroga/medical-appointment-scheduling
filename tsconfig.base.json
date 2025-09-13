@@ -33,12 +33,12 @@
     }
   },
   "include": [
-    "functions/**/*"
+    "functions/**/*",
+    "libs/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "libs/**/*",
     "**/*.spec.ts",
     "**/*.test.ts"
   ]

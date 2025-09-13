@@ -3,10 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": ".",
-    "declaration": false,
-    "declarationMap": false,
-    "noEmit": true,
+    "baseUrl": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
     "paths": {
       "@medical-appointment/core-domain": ["../core/domain/src"],
       "@medical-appointment/core-use-cases": ["../core/use-cases/src"],
