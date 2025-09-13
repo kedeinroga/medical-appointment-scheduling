@@ -107,7 +107,7 @@ Resources:
                   - kms:Decrypt
                   - kms:GenerateDataKey
                 Resource:
-                  - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}"
+                  - Fn::ImportValue: ${self:service}-${self:provider.stage}-sqs-kms-key-arn
 
 Outputs:
   MedicalAppointmentsEventBusName:
