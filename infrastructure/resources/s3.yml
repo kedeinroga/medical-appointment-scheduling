@@ -4,7 +4,7 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       # Use existing bucket name format to avoid conflicts
-      # BucketName: medical-appointment-serverless-${self:provider.stage}-${aws:accountId}
+      BucketName: medical-appointment-serverless-${self:provider.stage}-${aws:accountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -34,23 +34,22 @@ Resources:
         - Key: Purpose
           Value: serverless-deployments
 
-  # S3 Bucket Policy - Temporarily removed to allow infrastructure deployment
-  # Can be added later once infrastructure is stable
-  # ServerlessDeploymentBucketPolicy:
-  #   Type: AWS::S3::BucketPolicy
-  #   Properties:
-  #     Bucket: !Ref ServerlessDeploymentBucket
-  #     PolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Sid: DenyInsecureConnections
-  #           Effect: Deny
-  #           Principal: "*"
-  #           Action: 
-  #             - "s3:GetObject"
-  #             - "s3:PutObject"
-  #             - "s3:DeleteObject"
-  #           Resource: !Sub "${ServerlessDeploymentBucket}/*"
-  #           Condition:
-  #             Bool:
-  #               "aws:SecureTransport": "false"
+  # S3 Bucket Policy - Enforce secure transport
+  ServerlessDeploymentBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ServerlessDeploymentBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureConnections
+            Effect: Deny
+            Principal: "*"
+            Action: 
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:DeleteObject"
+            Resource: !Sub "${ServerlessDeploymentBucket}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"

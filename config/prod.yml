@@ -25,7 +25,7 @@ logging:
 
 security:
   encryption:
-    kmsKeyId: alias/medical-appointment-scheduling-prod
+    kmsKeyId: alias/aws/dynamodb
   cors:
     allowOrigin: "https://medical-appointments.example.com"
     allowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"

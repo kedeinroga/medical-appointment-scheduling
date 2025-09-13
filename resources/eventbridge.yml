@@ -37,8 +37,6 @@ Resources:
       Targets:
         - Arn: !GetAtt AppointmentsCompletionQueue.Arn
           Id: "AppointmentProcessedPETarget"
-          SqsParameters:
-            MessageGroupId: "appointment-completion"
 
   # Rule for Chile appointment processed events
   AppointmentProcessedCLRule:
@@ -60,8 +58,6 @@ Resources:
       Targets:
         - Arn: !GetAtt AppointmentsCompletionQueue.Arn
           Id: "AppointmentProcessedCLTarget"
-          SqsParameters:
-            MessageGroupId: "appointment-completion"
 
   # Rule for appointment processing errors
   AppointmentProcessingErrorRule:
@@ -81,8 +77,6 @@ Resources:
       Targets:
         - Arn: !GetAtt AppointmentsCompletionQueue.Arn
           Id: "AppointmentProcessingErrorTarget"
-          SqsParameters:
-            MessageGroupId: "appointment-completion"
 
   # IAM Role for EventBridge to send messages to SQS
   EventBridgeExecutionRole:

@@ -21,11 +21,16 @@ provider:
     STAGE: ${self:provider.stage}
     AWS_REGION: ${self:provider.region}
     LOG_LEVEL: ${file(config/${self:provider.stage}.yml):logging.level, 'INFO'}
-    APPOINTMENTS_TABLE_NAME: !Ref AppointmentsTable
-    APPOINTMENTS_TOPIC_ARN: !Ref AppointmentsTopic
-    APPOINTMENTS_PE_QUEUE_URL: !Ref AppointmentsPEQueue
-    APPOINTMENTS_CL_QUEUE_URL: !Ref AppointmentsCLQueue
-    EVENTBRIDGE_BUS_NAME: !Ref MedicalAppointmentsEventBus
+    APPOINTMENTS_TABLE_NAME:
+      Ref: AppointmentsTable
+    APPOINTMENTS_TOPIC_ARN:
+      Ref: AppointmentsTopic
+    APPOINTMENTS_PE_QUEUE_URL:
+      Ref: AppointmentsPEQueue
+    APPOINTMENTS_CL_QUEUE_URL:
+      Ref: AppointmentsCLQueue
+    EVENTBRIDGE_BUS_NAME:
+      Ref: MedicalAppointmentsEventBus
     # Use Parameter Store for configuration management
     RDS_HOST: ${ssm:/medical-appointment/${self:provider.stage}/rds/host}
     RDS_DATABASE: ${ssm:/medical-appointment/${self:provider.stage}/rds/database}
@@ -45,13 +50,20 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource:
-            - !GetAtt AppointmentsTable.Arn
-            - !Sub "${AppointmentsTable.Arn}/index/*"
+            - Fn::GetAtt:
+                - AppointmentsTable
+                - Arn
+            - Fn::Sub:
+                - "${TableArn}/index/*"
+                - TableArn:
+                    Fn::GetAtt:
+                      - AppointmentsTable
+                      - Arn
         - Effect: Allow
           Action:
             - sns:Publish
           Resource:
-            - !Ref AppointmentsTopic
+            - Ref: AppointmentsTopic
         - Effect: Allow
           Action:
             - sqs:SendMessage
@@ -59,14 +71,22 @@ provider:
             - sqs:DeleteMessage
             - sqs:GetQueueAttributes
           Resource:
-            - !GetAtt AppointmentsPEQueue.Arn
-            - !GetAtt AppointmentsCLQueue.Arn
-            - !GetAtt AppointmentsCompletionQueue.Arn
+            - Fn::GetAtt:
+                - AppointmentsPEQueue
+                - Arn
+            - Fn::GetAtt:
+                - AppointmentsCLQueue
+                - Arn
+            - Fn::GetAtt:
+                - AppointmentsCompletionQueue
+                - Arn
         - Effect: Allow
           Action:
             - events:PutEvents
           Resource:
-            - !GetAtt MedicalAppointmentsEventBus.Arn
+            - Fn::GetAtt:
+                - MedicalAppointmentsEventBus
+                - Arn
         - Effect: Allow
           Action:
             - rds-data:ExecuteStatement
@@ -126,7 +146,10 @@ functions:
     description: "Process appointments for Peru (PE) country"
     events:
       - sqs:
-          arn: !GetAtt AppointmentsPEQueue.Arn
+          arn:
+            Fn::GetAtt:
+              - AppointmentsPEQueue
+              - Arn
           batchSize: 10
 
   # Chile appointment processor  
@@ -135,7 +158,10 @@ functions:
     description: "Process appointments for Chile (CL) country"
     events:
       - sqs:
-          arn: !GetAtt AppointmentsCLQueue.Arn
+          arn:
+            Fn::GetAtt:
+              - AppointmentsCLQueue
+              - Arn
           batchSize: 10
 
   # Appointment completion processor
@@ -144,7 +170,10 @@ functions:
     description: "Complete appointment processing and update status"
     events:
       - sqs:
-          arn: !GetAtt AppointmentsCompletionQueue.Arn
+          arn:
+            Fn::GetAtt:
+              - AppointmentsCompletionQueue
+              - Arn
           batchSize: 10
 
 # Infrastructure as Code - Import resource definitions

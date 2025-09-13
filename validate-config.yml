@@ -1,0 +1,50 @@
+# Temporary configuration for syntax validation without AWS credentials
+# This file overrides certain configurations to allow offline validation
+
+service: medical-appointment-scheduling
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: dev
+  
+  # Override deployment bucket for offline validation
+  deploymentBucket:
+    name: dummy-bucket-for-validation
+  
+  environment:
+    STAGE: dev
+    AWS_REGION: us-east-1
+    LOG_LEVEL: INFO
+    APPOINTMENTS_TABLE_NAME: dummy-table
+    APPOINTMENTS_TOPIC_ARN: dummy-topic
+    APPOINTMENTS_PE_QUEUE_URL: dummy-queue
+    APPOINTMENTS_CL_QUEUE_URL: dummy-queue
+    EVENTBRIDGE_BUS_NAME: dummy-bus
+    # Override SSM parameters for offline validation
+    RDS_HOST: dummy-host
+    RDS_DATABASE: dummy-db
+    RDS_PORT: 3306
+    RDS_USERNAME: dummy-user
+    RDS_PASSWORD: dummy-password
+
+# Include the same resource definitions for validation
+resources:
+  - ${file(resources/dynamodb.yml)}
+  - ${file(resources/sns.yml)}
+  - ${file(resources/sqs.yml)}
+  - ${file(resources/eventbridge.yml)}
+  - ${file(resources/api-gateway.yml)}
+  - ${file(resources/iam.yml)}
+
+functions:
+  appointment:
+    handler: functions/appointment/handler.main
+  appointment-pe:
+    handler: functions/appointment-pe/handler.main
+  appointment-cl:
+    handler: functions/appointment-cl/handler.main
+  appointment-completion:
+    handler: functions/appointment-completion/handler.main

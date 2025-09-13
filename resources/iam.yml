@@ -116,7 +116,7 @@ Resources:
                   - ssm:GetParameters
                   - ssm:GetParametersByPath
                 Resource:
-                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/medical-appointment-scheduling/${self:provider.stage}/*"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/medical-appointment/${self:provider.stage}/*"
         - PolicyName: MedicalAppointmentRDSPolicy
           PolicyDocument:
             Version: "2012-10-17"

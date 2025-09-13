@@ -4,7 +4,8 @@ Resources:
   ApiGatewayRequestValidator:
     Type: AWS::ApiGateway::RequestValidator
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       Name: medical-appointment-request-validator
       ValidateRequestBody: true
       ValidateRequestParameters: true
@@ -13,7 +14,8 @@ Resources:
   CreateAppointmentRequestModel:
     Type: AWS::ApiGateway::Model
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ContentType: application/json
       Name: CreateAppointmentRequest
       Schema:
@@ -40,7 +42,8 @@ Resources:
   AppointmentResponseModel:
     Type: AWS::ApiGateway::Model
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ContentType: application/json
       Name: AppointmentResponse
       Schema:
@@ -75,7 +78,8 @@ Resources:
   AppointmentListResponseModel:
     Type: AWS::ApiGateway::Model
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ContentType: application/json
       Name: AppointmentListResponse
       Schema:
@@ -100,7 +104,8 @@ Resources:
   ErrorResponseModel:
     Type: AWS::ApiGateway::Model
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ContentType: application/json
       Name: ErrorResponse
       Schema:
@@ -129,7 +134,8 @@ Resources:
   GatewayResponse400:
     Type: AWS::ApiGateway::GatewayResponse
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ResponseType: BAD_REQUEST_BODY
       StatusCode: "400"
       ResponseTemplates:
@@ -149,7 +155,8 @@ Resources:
   GatewayResponse404:
     Type: AWS::ApiGateway::GatewayResponse
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ResponseType: RESOURCE_NOT_FOUND
       StatusCode: "404"
       ResponseTemplates:
@@ -167,7 +174,8 @@ Resources:
   GatewayResponse429:
     Type: AWS::ApiGateway::GatewayResponse
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ResponseType: THROTTLED
       StatusCode: "429"
       ResponseTemplates:
@@ -185,7 +193,8 @@ Resources:
   GatewayResponse500:
     Type: AWS::ApiGateway::GatewayResponse
     Properties:
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId:
+        Ref: ApiGatewayRestApi
       ResponseType: DEFAULT_5XX
       StatusCode: "500"
       ResponseTemplates:
@@ -212,7 +221,8 @@ Resources:
         BurstLimit: ${file(config/${self:provider.stage}.yml):api.throttling.burstLimit}
         RateLimit: ${file(config/${self:provider.stage}.yml):api.throttling.rateLimit}
       ApiStages:
-        - ApiId: !Ref ApiGatewayRestApi
+        - ApiId:
+            Ref: ApiGatewayRestApi
           Stage: ${self:provider.stage}
 
   # API Key for usage plan (optional)
@@ -223,16 +233,19 @@ Resources:
       Description: "API Key for Medical Appointment Scheduling"
       Enabled: true
       StageKeys:
-        - RestApiId: !Ref ApiGatewayRestApi
+        - RestApiId:
+            Ref: ApiGatewayRestApi
           StageName: ${self:provider.stage}
 
   # Link API Key to Usage Plan
   MedicalAppointmentUsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
     Properties:
-      KeyId: !Ref MedicalAppointmentApiKey
+      KeyId:
+        Ref: MedicalAppointmentApiKey
       KeyType: API_KEY
-      UsagePlanId: !Ref MedicalAppointmentApiUsagePlan
+      UsagePlanId:
+        Ref: MedicalAppointmentApiUsagePlan
 
   # CloudWatch Log Group for API Gateway
   ApiGatewayLogGroup:
@@ -245,29 +258,38 @@ Resources:
   ApiGatewayAccount:
     Type: AWS::ApiGateway::Account
     Properties:
-      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchLogsRole.Arn
+      CloudWatchRoleArn:
+        Fn::GetAtt:
+          - ApiGatewayCloudWatchLogsRole
+          - Arn
 
 Outputs:
   ApiGatewayRestApiId:
     Description: "ID of the API Gateway REST API"
-    Value: !Ref ApiGatewayRestApi
+    Value:
+      Ref: ApiGatewayRestApi
     Export:
       Name: ${self:service}-${self:provider.stage}-api-gateway-rest-api-id
 
   ApiGatewayRestApiRootResourceId:
     Description: "Root Resource ID of the API Gateway REST API"
-    Value: !GetAtt ApiGatewayRestApi.RootResourceId
+    Value:
+      Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
     Export:
       Name: ${self:service}-${self:provider.stage}-api-gateway-root-resource-id
 
   MedicalAppointmentApiKeyId:
     Description: "ID of the API Key"
-    Value: !Ref MedicalAppointmentApiKey
+    Value:
+      Ref: MedicalAppointmentApiKey
     Export:
       Name: ${self:service}-${self:provider.stage}-api-key-id
 
   MedicalAppointmentUsagePlanId:
     Description: "ID of the Usage Plan"
-    Value: !Ref MedicalAppointmentApiUsagePlan
+    Value:
+      Ref: MedicalAppointmentApiUsagePlan
     Export:
       Name: ${self:service}-${self:provider.stage}-usage-plan-id

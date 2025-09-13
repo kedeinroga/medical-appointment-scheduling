@@ -24,9 +24,6 @@ stage: dev
 logging:
   level: DEBUG
   retentionDays: 7
-
-# RDS configuration will be handled by Parameter Store from infrastructure stack
-# No need to define RDS connection details here anymore
   sampling: 1.0
 
 security:
