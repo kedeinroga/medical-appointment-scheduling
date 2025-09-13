@@ -1,5 +1,5 @@
 import { CountryProcessingFactory } from '../country-processing.factory';
-import { ProcessAppointmentUseCase } from '../../../../../libs/core/use-cases/src/process-appointment/process-appointment.use-case';
+import { ProcessCountryAppointmentUseCase } from '../../../../../libs/core/use-cases/src/process-country-appointment/process-country-appointment.use-case';
 import { CountryISO } from '../../../../../libs/core/domain/src/value-objects/country-iso.vo';
 import { MySQLAppointmentRepository } from '../../adapters/repositories/mysql-appointment.repository';
 import { MySQLScheduleRepository } from '../../adapters/repositories/mysql-schedule.repository';
@@ -9,7 +9,7 @@ import { EventBridgeAdapter } from '../../adapters/messaging/eventbridge.adapter
 jest.mock('../../adapters/repositories/mysql-appointment.repository');
 jest.mock('../../adapters/repositories/mysql-schedule.repository');
 jest.mock('../../adapters/messaging/eventbridge.adapter');
-jest.mock('../../../../../libs/core/use-cases/src/process-appointment/process-appointment.use-case');
+jest.mock('../../../../../libs/core/use-cases/src/process-country-appointment/process-country-appointment.use-case');
 
 describe('CountryProcessingFactory', () => {
   beforeEach(() => {
@@ -19,13 +19,13 @@ describe('CountryProcessingFactory', () => {
   });
 
   describe('createProcessAppointmentUseCase', () => {
-    it('should create ProcessAppointmentUseCase with proper dependencies', () => {
-      const mockUseCase = {} as ProcessAppointmentUseCase;
-      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
+    it('should create ProcessCountryAppointmentUseCase with proper dependencies', () => {
+      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
+      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
       const result = CountryProcessingFactory.createProcessAppointmentUseCase();
 
-      expect(ProcessAppointmentUseCase).toHaveBeenCalledWith(
+      expect(ProcessCountryAppointmentUseCase).toHaveBeenCalledWith(
         expect.any(Object), // MySQLAppointmentRepository
         expect.any(Object), // EventBridgeAdapter
         expect.any(Object)  // MySQLScheduleRepository
@@ -33,9 +33,9 @@ describe('CountryProcessingFactory', () => {
       expect(result).toBe(mockUseCase);
     });
 
-    it('should create ProcessAppointmentUseCase for specific country', () => {
-      const mockUseCase = {} as ProcessAppointmentUseCase;
-      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
+    it('should create ProcessCountryAppointmentUseCase for specific country', () => {
+      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
+      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
       const peCountry = CountryISO.fromString('PE');
       const result = CountryProcessingFactory.createProcessAppointmentUseCase(peCountry);
@@ -99,8 +99,8 @@ describe('CountryProcessingFactory', () => {
 
   describe('createCountryProcessingDependencies', () => {
     it('should create all dependencies for country processing', () => {
-      const mockUseCase = {} as ProcessAppointmentUseCase;
-      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
+      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
+      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
       const peCountry = CountryISO.fromString('PE');
       const result = CountryProcessingFactory.createCountryProcessingDependencies(peCountry);
@@ -112,8 +112,8 @@ describe('CountryProcessingFactory', () => {
     });
 
     it('should create dependencies for different countries', () => {
-      const mockUseCase = {} as ProcessAppointmentUseCase;
-      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
+      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
+      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
       const peCountry = CountryISO.fromString('PE');
       const clCountry = CountryISO.fromString('CL');
@@ -149,8 +149,8 @@ describe('CountryProcessingFactory', () => {
 
   describe('integration behavior', () => {
     it('should use same repository instances across different method calls', () => {
-      const mockUseCase = {} as ProcessAppointmentUseCase;
-      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
+      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
+      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
       // Get dependencies individually
       const appointmentRepo = CountryProcessingFactory.getMySQLAppointmentRepository();

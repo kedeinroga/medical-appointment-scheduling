@@ -60,14 +60,14 @@ describe('UseCaseFactory', () => {
   });
 
   describe('createProcessAppointmentUseCase', () => {
-    it('should create ProcessAppointmentUseCase with MySQL dependencies', () => {
+    it('should create ProcessAppointmentUseCase with DynamoDB dependencies', () => {
       const mockUseCase = {} as ProcessAppointmentUseCase;
       (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
       const result = UseCaseFactory.createProcessAppointmentUseCase();
 
       expect(ProcessAppointmentUseCase).toHaveBeenCalledWith(
-        expect.any(MySQLAppointmentRepository),
+        expect.any(DynamoDBAppointmentRepository),
         expect.any(EventBridgeAdapter),
         expect.any(MySQLScheduleRepository)
       );

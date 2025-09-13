@@ -50,11 +50,11 @@ export class UseCaseFactory {
 
   /**
    * Creates a ProcessAppointmentUseCase with all dependencies injected
-   * Uses MySQL repository for country-specific processing
+   * Uses DynamoDB repository for main appointment processing
    */
   public static createProcessAppointmentUseCase(): ProcessAppointmentUseCase {
     return new ProcessAppointmentUseCase(
-      this.getMySQLAppointmentRepository(),
+      this.getAppointmentRepository(),
       this.getEventBridgeAdapter(),
       this.getScheduleRepository()
     );

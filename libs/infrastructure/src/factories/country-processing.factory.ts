@@ -1,5 +1,5 @@
 // Use Cases imports
-import { ProcessAppointmentUseCase } from '@medical-appointment/core-use-cases';
+import { ProcessCountryAppointmentUseCase } from '@medical-appointment/core-use-cases';
 
 // Domain imports
 import { CountryISO } from '@medical-appointment/core-domain';
@@ -19,11 +19,11 @@ export class CountryProcessingFactory {
   private static eventBridgeAdapter: EventBridgeAdapter;
 
   /**
-   * Creates a ProcessAppointmentUseCase configured for country-specific processing
+   * Creates a ProcessCountryAppointmentUseCase configured for country-specific processing
    * Uses MySQL repositories as required by the business flow
    */
-  public static createProcessAppointmentUseCase(countryISO?: CountryISO): ProcessAppointmentUseCase {
-    return new ProcessAppointmentUseCase(
+  public static createProcessAppointmentUseCase(countryISO?: CountryISO): ProcessCountryAppointmentUseCase {
+    return new ProcessCountryAppointmentUseCase(
       this.getMySQLAppointmentRepository(),
       this.getEventBridgeAdapter(),
       this.getScheduleRepository()

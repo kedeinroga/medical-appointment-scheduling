@@ -84,15 +84,22 @@ describe(ProcessAppointmentUseCase.name, () => {
       // Assert
       expect(result.appointmentId).toBe(dto.appointmentId);
       expect(result.countryISO).toBe('PE');
-      expect(result.status).toBe('processed');
-      expect(result.message).toBe('Appointment processed successfully for PE');
+      expect(result.status).toBe('pending');
+      expect(result.message).toBe('Appointment created and sent for processing to PE');
 
-      expect(mockAppointmentRepository.findByAppointmentId).toHaveBeenCalledWith(AppointmentId.fromString(dto.appointmentId));
-      expect(mockAppointmentRepository.update).toHaveBeenCalledTimes(1);
+      // Verify schedule was found
       expect(mockScheduleRepository.findByScheduleId).toHaveBeenCalledWith(100, CountryISO.PERU);
+      
+      // Verify appointment was saved to DynamoDB with pending status
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
-      expect(mockScheduleRepository.markAsReserved).toHaveBeenCalledWith(100, CountryISO.PERU);
+      
+      // Verify event was published for country processing
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+      
+      // Should NOT call update (that's for completion), should NOT call markAsReserved (that's for country processing)
+      expect(mockAppointmentRepository.update).not.toHaveBeenCalled();
+      expect(mockAppointmentRepository.findByAppointmentId).not.toHaveBeenCalled();
+      expect(mockScheduleRepository.markAsReserved).not.toHaveBeenCalled();
     });
 
     it('should process Chile appointment successfully', async () => {
@@ -142,15 +149,22 @@ describe(ProcessAppointmentUseCase.name, () => {
       // Assert
       expect(result.appointmentId).toBe(dto.appointmentId);
       expect(result.countryISO).toBe('CL');
-      expect(result.status).toBe('processed');
-      expect(result.message).toBe('Appointment processed successfully for CL');
+      expect(result.status).toBe('pending');
+      expect(result.message).toBe('Appointment created and sent for processing to CL');
 
-      expect(mockAppointmentRepository.findByAppointmentId).toHaveBeenCalledWith(AppointmentId.fromString(dto.appointmentId));
-      expect(mockAppointmentRepository.update).toHaveBeenCalledTimes(1);
+      // Verify schedule was found
       expect(mockScheduleRepository.findByScheduleId).toHaveBeenCalledWith(200, CountryISO.CHILE);
+      
+      // Verify appointment was saved to DynamoDB with pending status
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
-      expect(mockScheduleRepository.markAsReserved).toHaveBeenCalledWith(200, CountryISO.CHILE);
+      
+      // Verify event was published for country processing
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+      
+      // Should NOT call update (that's for completion), should NOT call markAsReserved (that's for country processing)
+      expect(mockAppointmentRepository.update).not.toHaveBeenCalled();
+      expect(mockAppointmentRepository.findByAppointmentId).not.toHaveBeenCalled();
+      expect(mockScheduleRepository.markAsReserved).not.toHaveBeenCalled();
     });
 
     it('should throw error when schedule not found', async () => {
@@ -231,7 +245,7 @@ describe(ProcessAppointmentUseCase.name, () => {
       await expect(processAppointmentUseCase.execute(dto)).rejects.toThrow('Database save failed');
     });
 
-    it('should handle schedule reservation error', async () => {
+    it('should handle event bus publish error', async () => {
       // Arrange
       const dto: ProcessAppointmentDto = {
         appointmentId: '550e8400-e29b-41d4-a716-446655440000',
@@ -248,31 +262,12 @@ describe(ProcessAppointmentUseCase.name, () => {
         specialtyId: 1
       });
 
-      // Mock original appointment found
-      const mockOriginalAppointment = Appointment.fromPrimitives({
-        appointmentId: dto.appointmentId,
-        insuredId: dto.insuredId,
-        countryISO: dto.countryISO,
-        schedule: {
-          scheduleId: dto.scheduleId,
-          centerId: 1,
-          specialtyId: 1,
-          medicId: 1,
-          date: new Date('2025-12-01T10:00:00Z')
-        },
-        status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(mockOriginalAppointment);
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
-      mockAppointmentRepository.update.mockResolvedValue(undefined);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockScheduleRepository.markAsReserved.mockRejectedValue(new Error('Schedule already reserved'));
+      mockEventBus.publish.mockRejectedValue(new Error('Event bus connection failed'));
 
       // Act & Assert
-      await expect(processAppointmentUseCase.execute(dto)).rejects.toThrow('Schedule already reserved');
+      await expect(processAppointmentUseCase.execute(dto)).rejects.toThrow('Event bus connection failed');
     });
   });
 });

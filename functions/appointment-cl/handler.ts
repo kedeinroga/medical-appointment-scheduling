@@ -10,7 +10,7 @@ import { SQSEvent, SQSHandler, Context } from 'aws-lambda';
 import { logBusinessError, logInfrastructureError, maskInsuredId } from '@medical-appointment/shared';
 
 // Application layer imports  
-import { ProcessAppointmentDto } from '@medical-appointment/core-use-cases';
+import { ProcessCountryAppointmentDto } from '@medical-appointment/core-use-cases';
 import { ValidationError } from '@medical-appointment/shared';
 
 // Infrastructure layer
@@ -103,7 +103,7 @@ class MessageProcessor {
       }
 
       // Create DTO
-      const processDto: ProcessAppointmentDto = {
+      const processDto: ProcessCountryAppointmentDto = {
         appointmentId: appointmentData.appointmentId,
         insuredId: appointmentData.insuredId,
         countryISO: appointmentData.countryISO,
