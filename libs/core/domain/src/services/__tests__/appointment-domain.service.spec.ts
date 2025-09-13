@@ -81,7 +81,7 @@ describe('AppointmentDomainService', () => {
         insured: createValidInsured(),
         schedule: createValidSchedule()
       });
-      appointment.markAsProcessed();
+      // No need to mark as processed - appointment starts as pending
 
       // Act
       const result = service.completeAppointment(appointment);

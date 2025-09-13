@@ -175,7 +175,7 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
 
       // Set different statuses
       mysqlAppointments[0].markAsProcessed();
-      mysqlAppointments[1].markAsProcessed();
+      // mysqlAppointments[1] remains pending and can be completed
       mysqlAppointments[1].markAsCompleted();
 
       mockDynamoDbRepository.findByInsuredId.mockResolvedValue(dynamoAppointments);

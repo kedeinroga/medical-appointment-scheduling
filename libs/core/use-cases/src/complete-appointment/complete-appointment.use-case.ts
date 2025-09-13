@@ -39,9 +39,9 @@ export class CompleteAppointmentUseCase {
         throw new Error(`Appointment with ID ${dto.appointmentId} not found`);
       }
 
-      // Validate appointment is in processed status
-      if (!appointment.isProcessed()) {
-        throw new Error(`Appointment ${dto.appointmentId} is not in processed status. Current status: ${appointment.getStatus().getValue()}`);
+      // Validate appointment is in pending status (ready to be completed)
+      if (!appointment.isPending()) {
+        throw new Error(`Appointment ${dto.appointmentId} is not in pending status. Current status: ${appointment.getStatus().getValue()}`);
       }
 
       // Validate country matches

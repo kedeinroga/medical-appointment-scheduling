@@ -31,7 +31,7 @@ describe(CompleteAppointmentUseCase.name, () => {
     insuredIdValue: string = '12345',
     countryISO: CountryISO = CountryISO.PERU,
     scheduleId: number = 100,
-    processed: boolean = true
+    pending: boolean = true
   ): Appointment => {
     const insured = Insured.create({
       countryISO,
@@ -51,7 +51,7 @@ describe(CompleteAppointmentUseCase.name, () => {
       schedule
     });
 
-    if (processed) {
+    if (!pending) {
       appointment.markAsProcessed();
     }
 
@@ -136,7 +136,7 @@ describe(CompleteAppointmentUseCase.name, () => {
 
     it('should throw error when appointment is not processed', async () => {
       // Arrange
-      const appointment = createTestAppointment('12345', CountryISO.PERU, 100, false); // Not processed
+      const appointment = createTestAppointment('12345', CountryISO.PERU, 100, false); // Not pending (processed)
 
       const dto: CompleteAppointmentDto = {
         appointmentId: appointment.getAppointmentId().getValue(),
@@ -149,7 +149,7 @@ describe(CompleteAppointmentUseCase.name, () => {
 
       // Act & Assert
       await expect(completeAppointmentUseCase.execute(dto)).rejects.toThrow(
-        'is not in processed status. Current status: pending'
+        'is not in pending status. Current status: processed'
       );
     });
 
@@ -169,7 +169,7 @@ describe(CompleteAppointmentUseCase.name, () => {
 
       // Act & Assert
       await expect(completeAppointmentUseCase.execute(dto)).rejects.toThrow(
-        'is not in processed status. Current status: completed'
+        'is not in pending status. Current status: completed'
       );
     });
 

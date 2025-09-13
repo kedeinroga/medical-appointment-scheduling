@@ -81,13 +81,13 @@ describe('Appointment', () => {
   });
 
   describe('markAsCompleted', () => {
-    it('should mark processed appointment as completed', () => {
+    it('should mark pending appointment as completed', () => {
       // Arrange
       const appointment = Appointment.create({
         insured: createValidInsured(),
         schedule: createValidSchedule()
       });
-      appointment.markAsProcessed();
+      // No need to mark as processed first - appointment starts as pending
 
       // Act
       appointment.markAsCompleted();
@@ -96,16 +96,17 @@ describe('Appointment', () => {
       expect(appointment.getStatus().isCompleted()).toBe(true);
     });
 
-    it('should throw error when trying to complete non-processed appointment', () => {
+    it('should throw error when trying to complete non-pending appointment', () => {
       // Arrange
       const appointment = Appointment.create({
         insured: createValidInsured(),
         schedule: createValidSchedule()
       });
+      appointment.markAsProcessed(); // Move to processed status
 
       // Act & Assert
       expect(() => appointment.markAsCompleted()).toThrow(
-        'Only processed appointments can be marked as completed'
+        'Only pending appointments can be marked as completed'
       );
     });
   });
@@ -303,7 +304,7 @@ describe('Appointment', () => {
         insured: createValidInsured(),
         schedule: createValidSchedule()
       });
-      appointment.markAsProcessed();
+      // No need to mark as processed first - appointment starts as pending
       appointment.markAsCompleted();
 
       // Act & Assert

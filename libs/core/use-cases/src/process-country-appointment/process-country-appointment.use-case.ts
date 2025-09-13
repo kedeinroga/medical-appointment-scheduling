@@ -61,7 +61,7 @@ export class ProcessCountryAppointmentUseCase {
           medicId: schedule.getMedicId(),
           date: schedule.getDate()
         },
-        status: 'processed',
+        status: 'scheduled',
         createdAt: new Date(),
         updatedAt: new Date(),
         processedAt: new Date()
@@ -87,18 +87,18 @@ export class ProcessCountryAppointmentUseCase {
 
       await this.eventBus.publish(appointmentProcessedEvent);
 
-      logger.info('Country appointment processed successfully', {
+      logger.info('Country appointment scheduled successfully', {
         appointmentId: dto.appointmentId,
         countryISO: dto.countryISO,
         maskedInsuredId: maskInsuredId(dto.insuredId),
-        processedAt: new Date().toISOString()
+        scheduledAt: new Date().toISOString()
       });
 
       return {
         appointmentId: dto.appointmentId,
         countryISO: dto.countryISO,
-        message: `Appointment processed successfully for ${dto.countryISO}`,
-        status: 'processed'
+        message: `Appointment scheduled successfully for ${dto.countryISO}`,
+        status: 'scheduled'
       } as ProcessCountryAppointmentResponseDto;
     } catch (error) {
       logger.error('Failed to process country appointment', {

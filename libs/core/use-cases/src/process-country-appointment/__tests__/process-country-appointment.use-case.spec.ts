@@ -64,13 +64,13 @@ describe(ProcessCountryAppointmentUseCase.name, () => {
       // Assert
       expect(result.appointmentId).toBe(dto.appointmentId);
       expect(result.countryISO).toBe('PE');
-      expect(result.status).toBe('processed');
-      expect(result.message).toBe('Appointment processed successfully for PE');
+      expect(result.status).toBe('scheduled');
+      expect(result.message).toBe('Appointment scheduled successfully for PE');
 
       // Verify schedule was found
       expect(mockScheduleRepository.findByScheduleId).toHaveBeenCalledWith(100, CountryISO.PERU);
       
-      // Verify appointment was saved to MySQL with processed status
+      // Verify appointment was saved to MySQL with scheduled status
       expect(mockCountryAppointmentRepository.save).toHaveBeenCalledTimes(1);
       
       // Verify schedule was marked as reserved
@@ -112,13 +112,13 @@ describe(ProcessCountryAppointmentUseCase.name, () => {
       // Assert
       expect(result.appointmentId).toBe(dto.appointmentId);
       expect(result.countryISO).toBe('CL');
-      expect(result.status).toBe('processed');
-      expect(result.message).toBe('Appointment processed successfully for CL');
+      expect(result.status).toBe('scheduled');
+      expect(result.message).toBe('Appointment scheduled successfully for CL');
 
       // Verify schedule was found
       expect(mockScheduleRepository.findByScheduleId).toHaveBeenCalledWith(200, CountryISO.CHILE);
       
-      // Verify appointment was saved to MySQL with processed status
+      // Verify appointment was saved to MySQL with scheduled status
       expect(mockCountryAppointmentRepository.save).toHaveBeenCalledTimes(1);
       
       // Verify schedule was marked as reserved

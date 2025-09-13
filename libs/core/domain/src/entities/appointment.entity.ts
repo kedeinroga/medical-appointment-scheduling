@@ -79,8 +79,8 @@ export class Appointment {
   }
 
   public markAsCompleted(): void {
-    if (!this.status.isProcessed()) {
-      throw new Error('Only processed appointments can be marked as completed');
+    if (!this.status.isPending()) {
+      throw new Error('Only pending appointments can be marked as completed');
     }
 
     this.status = AppointmentStatus.COMPLETED;

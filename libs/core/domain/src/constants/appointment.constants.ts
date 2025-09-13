@@ -1,7 +1,8 @@
 export const APPOINTMENT_STATUS = {
   COMPLETED: 'completed',
   PENDING: 'pending',
-  PROCESSED: 'processed'
+  PROCESSED: 'processed',
+  SCHEDULED: 'scheduled'
 } as const;
 
 export const COUNTRY_ISO = {

@@ -4,6 +4,7 @@ export class AppointmentStatus {
   public static readonly COMPLETED = new AppointmentStatus(APPOINTMENT_STATUS.COMPLETED);
   public static readonly PENDING = new AppointmentStatus(APPOINTMENT_STATUS.PENDING);
   public static readonly PROCESSED = new AppointmentStatus(APPOINTMENT_STATUS.PROCESSED);
+  public static readonly SCHEDULED = new AppointmentStatus(APPOINTMENT_STATUS.SCHEDULED);
 
   private constructor(private readonly value: AppointmentStatusType) {}
 
@@ -19,6 +20,8 @@ export class AppointmentStatus {
         return AppointmentStatus.PENDING;
       case APPOINTMENT_STATUS.PROCESSED:
         return AppointmentStatus.PROCESSED;
+      case APPOINTMENT_STATUS.SCHEDULED:
+        return AppointmentStatus.SCHEDULED;
       case APPOINTMENT_STATUS.COMPLETED:
         return AppointmentStatus.COMPLETED;
       default:
@@ -48,5 +51,9 @@ export class AppointmentStatus {
 
   public isProcessed(): boolean {
     return this.value === APPOINTMENT_STATUS.PROCESSED;
+  }
+
+  public isScheduled(): boolean {
+    return this.value === APPOINTMENT_STATUS.SCHEDULED;
   }
 }
