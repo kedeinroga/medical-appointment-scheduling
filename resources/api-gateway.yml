@@ -1,135 +1,5 @@
 # API Gateway Infrastructure as Code
 Resources:
-  # API Gateway Request Validator
-  ApiGatewayRequestValidator:
-    Type: AWS::ApiGateway::RequestValidator
-    Properties:
-      RestApiId:
-        Ref: ApiGatewayRestApi
-      Name: medical-appointment-request-validator
-      ValidateRequestBody: true
-      ValidateRequestParameters: true
-
-  # API Gateway Models for request/response validation
-  CreateAppointmentRequestModel:
-    Type: AWS::ApiGateway::Model
-    Properties:
-      RestApiId:
-        Ref: ApiGatewayRestApi
-      ContentType: application/json
-      Name: CreateAppointmentRequest
-      Schema:
-        type: object
-        required:
-          - insuredId
-          - scheduleId
-          - countryISO
-        properties:
-          insuredId:
-            type: string
-            pattern: "^[0-9]{5}$"
-            description: "5-digit insured ID (can have leading zeros)"
-          scheduleId:
-            type: integer
-            minimum: 1
-            description: "Schedule identifier for the appointment slot"
-          countryISO:
-            type: string
-            enum: ["PE", "CL"]
-            description: "Country ISO code (PE for Peru, CL for Chile)"
-        additionalProperties: false
-
-  AppointmentResponseModel:
-    Type: AWS::ApiGateway::Model
-    Properties:
-      RestApiId:
-        Ref: ApiGatewayRestApi
-      ContentType: application/json
-      Name: AppointmentResponse
-      Schema:
-        type: object
-        properties:
-          appointmentId:
-            type: string
-            description: "Unique appointment identifier"
-          insuredId:
-            type: string
-            description: "5-digit insured ID"
-          scheduleId:
-            type: integer
-            description: "Schedule identifier"
-          countryISO:
-            type: string
-            enum: ["PE", "CL"]
-            description: "Country ISO code"
-          status:
-            type: string
-            enum: ["pending", "processing", "completed", "failed"]
-            description: "Current appointment status"
-          createdAt:
-            type: string
-            format: date-time
-            description: "Appointment creation timestamp"
-          updatedAt:
-            type: string
-            format: date-time
-            description: "Last update timestamp"
-
-  AppointmentListResponseModel:
-    Type: AWS::ApiGateway::Model
-    Properties:
-      RestApiId:
-        Ref: ApiGatewayRestApi
-      ContentType: application/json
-      Name: AppointmentListResponse
-      Schema:
-        type: object
-        properties:
-          appointments:
-            type: array
-            items:
-              $ref: "#/definitions/Appointment"
-          pagination:
-            type: object
-            properties:
-              total:
-                type: integer
-              page:
-                type: integer
-              limit:
-                type: integer
-              hasNext:
-                type: boolean
-
-  ErrorResponseModel:
-    Type: AWS::ApiGateway::Model
-    Properties:
-      RestApiId:
-        Ref: ApiGatewayRestApi
-      ContentType: application/json
-      Name: ErrorResponse
-      Schema:
-        type: object
-        properties:
-          error:
-            type: object
-            properties:
-              code:
-                type: string
-                description: "Error code"
-              message:
-                type: string
-                description: "Human-readable error message"
-              details:
-                type: array
-                items:
-                  type: string
-                description: "Additional error details"
-              timestamp:
-                type: string
-                format: date-time
-                description: "Error timestamp"
-
   # Gateway Responses for better error handling
   GatewayResponse400:
     Type: AWS::ApiGateway::GatewayResponse
@@ -209,59 +79,12 @@ Resources:
       ResponseParameters:
         gatewayresponse.header.Access-Control-Allow-Origin: "'${file(config/${self:provider.stage}.yml):security.cors.allowOrigin}'"
 
-  # Usage Plan for API throttling
-  MedicalAppointmentApiUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    DependsOn:
-      - ApiGatewayStage
-    Properties:
-      UsagePlanName: medical-appointment-scheduling-${self:provider.stage}
-      Description: "Usage plan for Medical Appointment Scheduling API"
-      Throttle:
-        BurstLimit: ${file(config/${self:provider.stage}.yml):api.throttling.burstLimit}
-        RateLimit: ${file(config/${self:provider.stage}.yml):api.throttling.rateLimit}
-      ApiStages:
-        - ApiId:
-            Ref: ApiGatewayRestApi
-          Stage: ${self:provider.stage}
-
-  # API Key for usage plan (optional)
-  MedicalAppointmentApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    Properties:
-      Name: medical-appointment-scheduling-api-key-${self:provider.stage}
-      Description: "API Key for Medical Appointment Scheduling"
-      Enabled: true
-      StageKeys:
-        - RestApiId:
-            Ref: ApiGatewayRestApi
-          StageName: ${self:provider.stage}
-
-  # Link API Key to Usage Plan
-  MedicalAppointmentUsagePlanKey:
-    Type: AWS::ApiGateway::UsagePlanKey
-    Properties:
-      KeyId:
-        Ref: MedicalAppointmentApiKey
-      KeyType: API_KEY
-      UsagePlanId:
-        Ref: MedicalAppointmentApiUsagePlan
-
   # CloudWatch Log Group for API Gateway
   ApiGatewayLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: /aws/apigateway/medical-appointment-scheduling-${self:provider.stage}
       RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
-
-  # API Gateway Account configuration for CloudWatch Logs
-  ApiGatewayAccount:
-    Type: AWS::ApiGateway::Account
-    Properties:
-      CloudWatchRoleArn:
-        Fn::GetAtt:
-          - ApiGatewayCloudWatchLogsRole
-          - Arn
 
 Outputs:
   ApiGatewayRestApiId:
@@ -270,26 +93,3 @@ Outputs:
       Ref: ApiGatewayRestApi
     Export:
       Name: ${self:service}-${self:provider.stage}-api-gateway-rest-api-id
-
-  ApiGatewayRestApiRootResourceId:
-    Description: "Root Resource ID of the API Gateway REST API"
-    Value:
-      Fn::GetAtt:
-        - ApiGatewayRestApi
-        - RootResourceId
-    Export:
-      Name: ${self:service}-${self:provider.stage}-api-gateway-root-resource-id
-
-  MedicalAppointmentApiKeyId:
-    Description: "ID of the API Key"
-    Value:
-      Ref: MedicalAppointmentApiKey
-    Export:
-      Name: ${self:service}-${self:provider.stage}-api-key-id
-
-  MedicalAppointmentUsagePlanId:
-    Description: "ID of the Usage Plan"
-    Value:
-      Ref: MedicalAppointmentApiUsagePlan
-    Export:
-      Name: ${self:service}-${self:provider.stage}-usage-plan-id
