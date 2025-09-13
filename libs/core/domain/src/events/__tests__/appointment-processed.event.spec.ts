@@ -83,7 +83,8 @@ describe('AppointmentProcessedEvent', () => {
         insuredId,
         occurredOn: '2024-01-01T11:30:00.000Z',
         processedAt: '2024-01-01T11:00:00.000Z',
-        scheduleId
+        scheduleId,
+        status: 'processed'
       });
     });
   });
