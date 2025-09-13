@@ -25,6 +25,11 @@ describe('AppointmentDomainService', () => {
     futureDate.setDate(futureDate.getDate() + 1);
     futureDate.setHours(10, 0, 0, 0); // 10 AM
     
+    // Ensure it's not a Sunday (day 0) for Peru validation
+    while (futureDate.getDay() === 0) {
+      futureDate.setDate(futureDate.getDate() + 1);
+    }
+    
     return Schedule.create({
       centerId: 1,
       date: futureDate,

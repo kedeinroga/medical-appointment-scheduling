@@ -71,7 +71,7 @@ export class AppointmentDomainService {
     // Business rule: Schedule date must be in the future
     const now = new Date();
     if (schedule.getDate() <= now) {
-      throw new Error('Cannot create appointment for past dates');
+      throw new Error('Schedule date cannot be in the past');
     }
 
     // Business rule: Validate country-specific constraints
