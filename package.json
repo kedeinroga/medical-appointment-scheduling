@@ -3,16 +3,6 @@
   "version": "1.0.0",
   "description": "Medical appointment scheduling backend using Serverless Framework, TypeScript, and AWS",
   "private": true,
-  "workspaces": [
-    "libs/core/domain",
-    "libs/core/use-cases", 
-    "libs/infrastructure",
-    "libs/shared",
-    "functions/appointment",
-    "functions/appointment-pe",
-    "functions/appointment-cl",
-    "functions/appointment-completion"
-  ],
   "scripts": {
     "build": "npm run build:libs && tsc",
     "build:libs": "npm run build:domain && npm run build:shared && npm run build:use-cases && npm run build:infrastructure",
