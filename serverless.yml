@@ -19,7 +19,7 @@ provider:
   
   environment:
     STAGE: ${self:provider.stage}
-    AWS_REGION: ${self:provider.region}
+    DEPLOYMENT_REGION: ${self:provider.region}
     LOG_LEVEL: ${file(config/${self:provider.stage}.yml):logging.level, 'INFO'}
     APPOINTMENTS_TABLE_NAME:
       Ref: AppointmentsTable

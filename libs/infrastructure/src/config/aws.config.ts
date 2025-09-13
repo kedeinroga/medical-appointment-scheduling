@@ -4,7 +4,7 @@
  */
 
 export const AWS_CONFIG = {
-  AWS_REGION: process.env.AWS_REGION || 'us-east-1',
+  AWS_REGION: process.env.DEPLOYMENT_REGION || process.env.AWS_REGION || 'us-east-1',
   APPOINTMENTS_TABLE_NAME: process.env.APPOINTMENTS_TABLE_NAME || '',
   APPOINTMENTS_TOPIC_ARN: process.env.APPOINTMENTS_TOPIC_ARN || '',
   APPOINTMENTS_PE_QUEUE_URL: process.env.APPOINTMENTS_PE_QUEUE_URL || '',
