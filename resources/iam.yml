@@ -1,30 +1,5 @@
 # IAM Roles and Policies Infrastructure as Code
 Resources:
-  # CloudWatch Logs Group for Lambda functions
-  AppointmentLambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment
-      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
-
-  AppointmentPELambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment-pe
-      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
-
-  AppointmentCLLambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment-cl
-      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
-
-  AppointmentCompletionLambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/medical-appointment-scheduling-${self:provider.stage}-appointment-completion
-      RetentionInDays: ${file(config/${self:provider.stage}.yml):logging.retentionDays}
-
   # Enhanced IAM Role for Lambda functions with specific permissions
   MedicalAppointmentLambdaExecutionRole:
     Type: AWS::IAM::Role
