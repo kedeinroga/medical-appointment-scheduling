@@ -25,6 +25,10 @@ provider:
       Ref: AppointmentsTable
     APPOINTMENTS_TOPIC_ARN:
       Ref: AppointmentsTopic
+    APPOINTMENTS_PE_TOPIC_ARN:
+      Ref: AppointmentsPETopic
+    APPOINTMENTS_CL_TOPIC_ARN:
+      Ref: AppointmentsCLTopic
     APPOINTMENTS_PE_QUEUE_URL:
       Ref: AppointmentsPEQueue
     APPOINTMENTS_CL_QUEUE_URL:
@@ -66,6 +70,8 @@ provider:
             - sns:Publish
           Resource:
             - Ref: AppointmentsTopic
+            - Ref: AppointmentsPETopic
+            - Ref: AppointmentsCLTopic
         - Effect: Allow
           Action:
             - sqs:SendMessage

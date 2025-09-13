@@ -30,7 +30,7 @@ describe(CreateAppointmentUseCase.name, () => {
 
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockMessagingPort.publishAppointmentCreated.mockResolvedValue(undefined);
+      mockMessagingPort.publishToCountrySpecificTopic.mockResolvedValue(undefined);
 
       // Act
       const result = await createAppointmentUseCase.execute(dto);
@@ -44,7 +44,21 @@ describe(CreateAppointmentUseCase.name, () => {
         CountryISO.PERU
       );
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
-      expect(mockMessagingPort.publishAppointmentCreated).toHaveBeenCalledTimes(1);
+      expect(mockMessagingPort.publishToCountrySpecificTopic).toHaveBeenCalledTimes(1);
+      expect(mockMessagingPort.publishToCountrySpecificTopic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appointmentId: expect.any(String),
+          countryISO: 'PE',
+          eventType: 'AppointmentCreated',
+          insuredId: '12345',
+          scheduleId: 100,
+          timestamp: expect.any(String)
+        }),
+        expect.objectContaining({
+          getValue: expect.any(Function)
+        }),
+        'AppointmentCreated'
+      );
     });
 
     it('should create appointment successfully for CL country', async () => {
@@ -54,7 +68,7 @@ describe(CreateAppointmentUseCase.name, () => {
 
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockMessagingPort.publishAppointmentCreated.mockResolvedValue(undefined);
+      mockMessagingPort.publishToCountrySpecificTopic.mockResolvedValue(undefined);
 
       // Act
       const result = await createAppointmentUseCase.execute(dto);
@@ -68,7 +82,21 @@ describe(CreateAppointmentUseCase.name, () => {
         CountryISO.CHILE
       );
       expect(mockAppointmentRepository.save).toHaveBeenCalledTimes(1);
-      expect(mockMessagingPort.publishAppointmentCreated).toHaveBeenCalledTimes(1);
+      expect(mockMessagingPort.publishToCountrySpecificTopic).toHaveBeenCalledTimes(1);
+      expect(mockMessagingPort.publishToCountrySpecificTopic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appointmentId: expect.any(String),
+          countryISO: 'CL',
+          eventType: 'AppointmentCreated',
+          insuredId: '67890',  // Using actual value from ChileDto factory
+          scheduleId: 200,
+          timestamp: expect.any(String)
+        }),
+        expect.objectContaining({
+          getValue: expect.any(Function)
+        }),
+        'AppointmentCreated'
+      );
     });
 
     it('should throw error for invalid insured ID', async () => {
@@ -122,7 +150,7 @@ describe(CreateAppointmentUseCase.name, () => {
 
       mockScheduleRepository.findByScheduleId.mockResolvedValue(mockSchedule);
       mockAppointmentRepository.save.mockResolvedValue(undefined);
-      mockMessagingPort.publishAppointmentCreated.mockRejectedValue(new Error('SNS unavailable'));
+      mockMessagingPort.publishToCountrySpecificTopic.mockRejectedValue(new Error('SNS unavailable'));
 
       // Act & Assert
       await expect(createAppointmentUseCase.execute(dto)).rejects.toThrow('SNS unavailable');

@@ -80,9 +80,30 @@ class MessageProcessor {
     const messageId = record.messageId;
 
     try {
+      // Debug: Log the raw record
+      console.log('Processing SQS record PE:', {
+        messageId,
+        body: record.body,
+        messageAttributes: record.messageAttributes
+      });
+
       // Parse SNS message
       const snsMessage = JSON.parse(record.body);
+      
+      // Debug: Log parsed SNS message
+      console.log('Parsed SNS message PE:', {
+        messageId,
+        snsMessage: snsMessage,
+        messageContent: snsMessage.Message
+      });
+
       const appointmentData = JSON.parse(snsMessage.Message);
+
+      // Debug: Log appointment data
+      console.log('Parsed appointment data PE:', {
+        messageId,
+        appointmentData
+      });
 
       // Validate country
       if (appointmentData.countryISO !== 'PE') {
@@ -201,6 +222,13 @@ export const main: SQSHandler = async (event: SQSEvent, context: Context): Promi
   const requestId = context.awsRequestId;
 
   try {
+    // Step 0: Log that lambda was invoked
+    console.log('PE Lambda invoked', {
+      requestId,
+      recordCount: event.Records.length,
+      timestamp: new Date().toISOString()
+    });
+
     // Step 1: Create dependencies (Infrastructure -> Use Cases)
     const dependencies = DependencyFactory.create();
 

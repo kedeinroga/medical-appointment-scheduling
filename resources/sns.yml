@@ -1,6 +1,6 @@
 # SNS Topics Infrastructure as Code
 Resources:
-  # Main topic for appointment distribution
+  # Main topic for appointment distribution (keeping for backward compatibility)
   AppointmentsTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -16,31 +16,61 @@ Resources:
         - Key: ManagedBy
           Value: serverless
 
-  # Subscription to PE Queue with country filter
+  # Peru specific topic
+  AppointmentsPETopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: medical-appointment-scheduling-appointments-pe-${self:provider.stage}
+      DisplayName: "Medical Appointments Peru Topic"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: PE
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # Chile specific topic
+  AppointmentsCLTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: medical-appointment-scheduling-appointments-cl-${self:provider.stage}
+      DisplayName: "Medical Appointments Chile Topic"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: CL
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+    # Direct subscription from PE Topic to PE Queue (no filters needed)
   AppointmentsPESubscription:
     Type: AWS::SNS::Subscription
     Properties:
-      TopicArn: !Ref AppointmentsTopic
+      TopicArn: !Ref AppointmentsPETopic
       Endpoint: !GetAtt AppointmentsPEQueue.Arn
       Protocol: sqs
-      FilterPolicy:
-        countryISO:
-          - "PE"
-      RawMessageDelivery: true
+      RawMessageDelivery: false  # Include SNS metadata
 
-  # Subscription to CL Queue with country filter  
+  # Direct subscription from CL Topic to CL Queue (no filters needed)  
   AppointmentsCLSubscription:
     Type: AWS::SNS::Subscription
     Properties:
-      TopicArn: !Ref AppointmentsTopic
+      TopicArn: !Ref AppointmentsCLTopic
       Endpoint: !GetAtt AppointmentsCLQueue.Arn
       Protocol: sqs
-      FilterPolicy:
-        countryISO:
-          - "CL"
-      RawMessageDelivery: true
+      RawMessageDelivery: false  # Include SNS metadata
 
-  # SNS Topic Policy to allow Lambda to publish messages
+  # SNS Topic Policy to allow Lambda to publish messages to main topic
   AppointmentsTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     Properties:
@@ -61,15 +91,81 @@ Resources:
               StringEquals:
                 "aws:SourceAccount": !Ref "AWS::AccountId"
 
+  # SNS Topic Policy to allow Lambda to publish messages to PE topic
+  AppointmentsPETopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AppointmentsPETopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToPublishPE
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sns:Publish
+              - sns:GetTopicAttributes
+            Resource: !Ref AppointmentsPETopic
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
+  # SNS Topic Policy to allow Lambda to publish messages to CL topic
+  AppointmentsCLTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AppointmentsCLTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToPublishCL
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sns:Publish
+              - sns:GetTopicAttributes
+            Resource: !Ref AppointmentsCLTopic
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
 Outputs:
   AppointmentsTopicArn:
-    Description: "ARN of the Appointments SNS Topic"
+    Description: "ARN of the Main Appointments SNS Topic"
     Value: !Ref AppointmentsTopic
     Export:
       Name: ${self:service}-${self:provider.stage}-appointments-topic-arn
 
   AppointmentsTopicName:
-    Description: "Name of the Appointments SNS Topic"
+    Description: "Name of the Main Appointments SNS Topic"
     Value: !GetAtt AppointmentsTopic.TopicName
     Export:
       Name: ${self:service}-${self:provider.stage}-appointments-topic-name
+
+  AppointmentsPETopicArn:
+    Description: "ARN of the Peru Appointments SNS Topic"
+    Value: !Ref AppointmentsPETopic
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-topic-arn
+
+  AppointmentsPETopicName:
+    Description: "Name of the Peru Appointments SNS Topic"
+    Value: !GetAtt AppointmentsPETopic.TopicName
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-topic-name
+
+  AppointmentsCLTopicArn:
+    Description: "ARN of the Chile Appointments SNS Topic"
+    Value: !Ref AppointmentsCLTopic
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-topic-arn
+
+  AppointmentsCLTopicName:
+    Description: "Name of the Chile Appointments SNS Topic"
+    Value: !GetAtt AppointmentsCLTopic.TopicName
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-topic-name

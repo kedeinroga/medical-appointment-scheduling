@@ -5,7 +5,11 @@ describe('AWS Configuration', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    process.env = { ...originalEnv };
+    process.env = { 
+      ...originalEnv,
+      APPOINTMENTS_PE_TOPIC_ARN: 'arn:aws:sns:us-east-1:123456789:test-topic-pe',
+      APPOINTMENTS_CL_TOPIC_ARN: 'arn:aws:sns:us-east-1:123456789:test-topic-cl'
+    };
   });
 
   afterAll(() => {
@@ -27,8 +31,11 @@ describe('AWS Configuration', () => {
 
   describe('validateAWSConfig', () => {
     it('should not throw when all required configs are present', () => {
-      // All required configs are set in jest.setup.ts
-      expect(() => validateAWSConfig()).not.toThrow();
+      // Re-import to get new config values with updated environment
+      jest.resetModules();
+      const { validateAWSConfig: newValidateAWSConfig } = require('../aws.config');
+      
+      expect(() => newValidateAWSConfig()).not.toThrow();
     });
 
     it('should throw when required configs are missing', () => {

@@ -4,6 +4,8 @@
 process.env.AWS_REGION = 'us-east-1';
 process.env.APPOINTMENTS_TABLE_NAME = 'test-appointments-table';
 process.env.APPOINTMENTS_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:test-topic';
+process.env.APPOINTMENTS_PE_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:test-appointments-pe';
+process.env.APPOINTMENTS_CL_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:test-appointments-cl';
 process.env.APPOINTMENTS_PE_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-appointments-pe';
 process.env.APPOINTMENTS_CL_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-appointments-cl';
 process.env.APPOINTMENTS_COMPLETION_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-appointments-completion';

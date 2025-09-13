@@ -6,7 +6,7 @@ import { Logger } from '@aws-lambda-powertools/logger';
 import { CountryISO, IMessagingPort } from '@medical-appointment/core-domain';
 
 // Infrastructure imports
-import { AWS_CONFIG } from '../../config/aws.config';
+import { AWS_CONFIG, getSNSTopicArnByCountry } from '../../config/aws.config';
 import { SNSError } from '../../errors/aws.errors';
 
 /**
@@ -65,7 +65,12 @@ export class SNSAdapter implements IMessagingPort {
         appointmentId: appointmentData.appointmentId,
         countryISO: appointmentData.countryISO,
         messageId: result.MessageId,
-        topicArn: this.topicArn
+        topicArn: this.topicArn,
+        messageAttributes: {
+          countryISO: appointmentData.countryISO,
+          eventType: 'AppointmentCreated'
+        },
+        messageBody: message
       });
 
     } catch (error) {
@@ -118,9 +123,42 @@ export class SNSAdapter implements IMessagingPort {
     countryISO: CountryISO, 
     eventType: string
   ): Promise<void> {
-    await this.publishMessage(message, {
-      countryISO: countryISO.getValue(),
-      eventType
-    });
+    try {
+      const countrySpecificTopicArn = getSNSTopicArnByCountry(countryISO.getValue());
+      
+      const messageAttributes: Record<string, any> = {
+        countryISO: {
+          DataType: 'String',
+          StringValue: countryISO.getValue()
+        },
+        eventType: {
+          DataType: 'String',
+          StringValue: eventType
+        }
+      };
+
+      const command = new PublishCommand({
+        Message: JSON.stringify(message),
+        MessageAttributes: messageAttributes,
+        TopicArn: countrySpecificTopicArn
+      });
+
+      const result = await this.snsClient.send(command);
+
+      this.logger.info('Message published to country-specific topic successfully', {
+        messageId: result.MessageId,
+        countryISO: countryISO.getValue(),
+        eventType,
+        topicArn: countrySpecificTopicArn
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to publish message to country-specific topic', {
+        countryISO: countryISO.getValue(),
+        eventType,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new SNSError('publishToCountrySpecificTopic', error as Error);
+    }
   }
 }

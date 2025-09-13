@@ -131,7 +131,7 @@ Resources:
             Resource: !GetAtt AppointmentsPEQueue.Arn
             Condition:
               ArnEquals:
-                "aws:SourceArn": !Ref AppointmentsTopic
+                "aws:SourceArn": !Ref AppointmentsPETopic
 
   # Queue Policy to allow SNS to send messages to CL queue
   AppointmentsCLQueuePolicy:
@@ -151,7 +151,7 @@ Resources:
             Resource: !GetAtt AppointmentsCLQueue.Arn
             Condition:
               ArnEquals:
-                "aws:SourceArn": !Ref AppointmentsTopic
+                "aws:SourceArn": !Ref AppointmentsCLTopic
 
   # Queue Policy to allow EventBridge to send messages to completion queue
   AppointmentsCompletionQueuePolicy:

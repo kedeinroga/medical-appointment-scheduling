@@ -59,13 +59,19 @@ export class CreateAppointmentUseCase {
       // Save to repository
       await this.appointmentRepository.save(appointment);
 
-      // Publish to SNS instead of EventBridge
-      await this.messagingPort.publishAppointmentCreated({
-        appointmentId: appointment.getAppointmentId().getValue(),
-        countryISO: appointment.getCountryISO().getValue(),
-        insuredId: appointment.getInsuredId().getValue(),
-        scheduleId: appointment.getScheduleId()
-      });
+      // Publish to country-specific topic using the more appropriate method
+      await this.messagingPort.publishToCountrySpecificTopic(
+        {
+          appointmentId: appointment.getAppointmentId().getValue(),
+          countryISO: appointment.getCountryISO().getValue(),
+          eventType: 'AppointmentCreated',
+          insuredId: appointment.getInsuredId().getValue(),
+          scheduleId: appointment.getScheduleId(),
+          timestamp: new Date().toISOString()
+        },
+        countryISO,
+        'AppointmentCreated'
+      );
 
       logger.info('Appointment created successfully', {
         appointmentId: appointment.getAppointmentId().getValue(),

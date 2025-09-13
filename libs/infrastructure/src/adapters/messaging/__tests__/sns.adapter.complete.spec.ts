@@ -9,8 +9,20 @@ jest.mock('@aws-lambda-powertools/logger');
 jest.mock('../../../config/aws.config', () => ({
   AWS_CONFIG: {
     AWS_REGION: 'us-east-1',
-    APPOINTMENTS_TOPIC_ARN: 'arn:aws:sns:us-east-1:123456789:test-topic'
-  }
+    APPOINTMENTS_TOPIC_ARN: 'arn:aws:sns:us-east-1:123456789:test-topic',
+    APPOINTMENTS_PE_TOPIC_ARN: 'arn:aws:sns:us-east-1:123456789:test-topic-pe',
+    APPOINTMENTS_CL_TOPIC_ARN: 'arn:aws:sns:us-east-1:123456789:test-topic-cl'
+  },
+  getSNSTopicArnByCountry: jest.fn((countryISO: string) => {
+    switch (countryISO) {
+      case 'PE':
+        return 'arn:aws:sns:us-east-1:123456789:test-topic-pe';
+      case 'CL':
+        return 'arn:aws:sns:us-east-1:123456789:test-topic-cl';
+      default:
+        throw new Error(`Unsupported country: ${countryISO}`);
+    }
+  })
 }));
 
 describe('SNSAdapter - Complete Coverage', () => {
@@ -235,9 +247,10 @@ describe('SNSAdapter - Complete Coverage', () => {
         expect.any(PublishCommand)
       );
       expect(mockLogger.info).toHaveBeenCalledWith(
-        'Message published successfully',
+        'Message published to country-specific topic successfully',
         expect.objectContaining({
-          messageId: 'test-peru-message'
+          messageId: 'test-peru-message',
+          countryISO: 'PE'
         })
       );
     });
@@ -252,9 +265,10 @@ describe('SNSAdapter - Complete Coverage', () => {
         expect.any(PublishCommand)
       );
       expect(mockLogger.info).toHaveBeenCalledWith(
-        'Message published successfully',
+        'Message published to country-specific topic successfully',
         expect.objectContaining({
-          messageId: 'test-chile-message'
+          messageId: 'test-chile-message',
+          countryISO: 'CL'
         })
       );
     });
@@ -268,9 +282,11 @@ describe('SNSAdapter - Complete Coverage', () => {
       ).rejects.toThrow(SNSError);
       
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to publish message',
+        'Failed to publish message to country-specific topic',
         expect.objectContaining({
-          error: 'Country topic error'
+          error: 'Country topic error',
+          countryISO: 'PE',
+          eventType: 'AppointmentProcessed'
         })
       );
     });
