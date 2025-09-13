@@ -6,7 +6,6 @@ Resources:
     Properties:
       TopicName: medical-appointment-scheduling-appointments-${self:provider.stage}
       DisplayName: "Medical Appointments Distribution Topic"
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -41,7 +40,7 @@ Resources:
           - "CL"
       RawMessageDelivery: true
 
-  # SNS Topic Policy to allow SQS subscriptions
+  # SNS Topic Policy to allow Lambda to publish messages
   AppointmentsTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     Properties:
@@ -50,13 +49,13 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: AllowSQSSubscriptions
+          - Sid: AllowLambdaToPublish
             Effect: Allow
             Principal:
-              Service: sqs.amazonaws.com
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action:
-              - sns:Subscribe
-              - sns:Unsubscribe
+              - sns:Publish
+              - sns:GetTopicAttributes
             Resource: !Ref AppointmentsTopic
             Condition:
               StringEquals:
