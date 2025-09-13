@@ -1,357 +1,377 @@
-// Simple factory pattern test that doesn't rely on complex dependencies
-describe('Factory Pattern Principles Test', () => {
+import { UseCaseFactory } from '../use-case.factory';
+import { 
+  CreateAppointmentUseCase, 
+  GetAppointmentsByInsuredIdUseCase,
+  ProcessAppointmentUseCase,
+  CompleteAppointmentUseCase 
+} from '../../../../../libs/core/use-cases/src';
+import { DynamoDBAppointmentRepository } from '../../adapters/repositories/dynamodb-appointment.repository';
+import { MySQLAppointmentRepository } from '../../adapters/repositories/mysql-appointment.repository';
+import { MySQLScheduleRepository } from '../../adapters/repositories/mysql-schedule.repository';
+import { EventBridgeAdapter } from '../../adapters/messaging/eventbridge.adapter';
+import { SNSAdapter } from '../../adapters/messaging/sns.adapter';
+import { SQSAdapter } from '../../adapters/messaging/sqs.adapter';
+
+// Mock all dependencies
+jest.mock('../../../../../libs/core/use-cases/src');
+jest.mock('../../adapters/repositories/dynamodb-appointment.repository');
+jest.mock('../../adapters/repositories/mysql-appointment.repository');
+jest.mock('../../adapters/repositories/mysql-schedule.repository');
+jest.mock('../../adapters/messaging/eventbridge.adapter');
+jest.mock('../../adapters/messaging/sns.adapter');
+jest.mock('../../adapters/messaging/sqs.adapter');
+
+describe('UseCaseFactory', () => {
   beforeEach(() => {
-    // Reset environment variables for each test
-    process.env.APPOINTMENTS_TABLE_NAME = 'test-appointments-table';
-    process.env.APPOINTMENTS_TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:test-topic';
-    process.env.APPOINTMENTS_PE_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-pe-queue';
-    process.env.APPOINTMENTS_CL_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-cl-queue';
-    process.env.EVENTBRIDGE_BUS_NAME = 'test-event-bus';
-    process.env.AWS_REGION = 'us-east-1';
+    // Reset factory state before each test
+    UseCaseFactory.reset();
+    jest.clearAllMocks();
   });
 
-  describe('Factory Pattern Implementation', () => {
-    it('should demonstrate factory pattern principles', () => {
-      // Factory pattern provides a way to encapsulate object creation
-      interface IService {
-        type: string;
-        execute(): string;
-      }
+  describe('createCreateAppointmentUseCase', () => {
+    it('should create CreateAppointmentUseCase with proper dependencies', () => {
+      const mockUseCase = {} as CreateAppointmentUseCase;
+      (CreateAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
-      class ServiceA implements IService {
-        type = 'A';
-        execute(): string {
-          return 'Service A executed';
-        }
-      }
+      const result = UseCaseFactory.createCreateAppointmentUseCase();
 
-      class ServiceB implements IService {
-        type = 'B';
-        execute(): string {
-          return 'Service B executed';
-        }
-      }
-
-      class ServiceFactory {
-        static create(type: string): IService {
-          switch (type) {
-            case 'A':
-              return new ServiceA();
-            case 'B':
-              return new ServiceB();
-            default:
-              throw new Error(`Unknown service type: ${type}`);
-          }
-        }
-      }
-
-      // Act
-      const serviceA = ServiceFactory.create('A');
-      const serviceB = ServiceFactory.create('B');
-
-      // Assert
-      expect(serviceA.type).toBe('A');
-      expect(serviceB.type).toBe('B');
-      expect(serviceA.execute()).toBe('Service A executed');
-      expect(serviceB.execute()).toBe('Service B executed');
-      expect(() => ServiceFactory.create('C')).toThrow('Unknown service type: C');
-    });
-
-    it('should demonstrate singleton pattern principles', () => {
-      // Singleton pattern ensures only one instance exists
-      class ConfigService {
-        private static instance: ConfigService;
-        private config: Record<string, any> = {};
-
-        private constructor() {}
-
-        static getInstance(): ConfigService {
-          if (!this.instance) {
-            this.instance = new ConfigService();
-          }
-          return this.instance;
-        }
-
-        setConfig(key: string, value: any): void {
-          this.config[key] = value;
-        }
-
-        getConfig(key: string): any {
-          return this.config[key];
-        }
-
-        static reset(): void {
-          this.instance = undefined as any;
-        }
-      }
-
-      // Act
-      const instance1 = ConfigService.getInstance();
-      const instance2 = ConfigService.getInstance();
-      
-      instance1.setConfig('test', 'value');
-
-      // Assert
-      expect(instance1).toBe(instance2);
-      expect(instance2.getConfig('test')).toBe('value');
-
-      ConfigService.reset();
-      const instance3 = ConfigService.getInstance();
-      
-      expect(instance1).not.toBe(instance3);
-      expect(instance3.getConfig('test')).toBeUndefined();
-    });
-
-    it('should demonstrate dependency injection principles', () => {
-      // Dependency injection allows for loose coupling
-      interface ILogger {
-        log(message: string): void;
-      }
-
-      interface IRepository {
-        save(data: any): void;
-        find(id: string): any;
-      }
-
-      class ConsoleLogger implements ILogger {
-        private logs: string[] = [];
-        
-        log(message: string): void {
-          this.logs.push(message);
-        }
-
-        getLogs(): string[] {
-          return this.logs;
-        }
-      }
-
-      class InMemoryRepository implements IRepository {
-        private data: Map<string, any> = new Map();
-
-        save(data: any): void {
-          this.data.set(data.id, data);
-        }
-
-        find(id: string): any {
-          return this.data.get(id);
-        }
-      }
-
-      class AppointmentService {
-        constructor(
-          private logger: ILogger,
-          private repository: IRepository
-        ) {}
-
-        createAppointment(appointmentData: any): void {
-          this.logger.log(`Creating appointment: ${appointmentData.id}`);
-          this.repository.save(appointmentData);
-          this.logger.log(`Appointment created: ${appointmentData.id}`);
-        }
-
-        getAppointment(id: string): any {
-          this.logger.log(`Retrieving appointment: ${id}`);
-          return this.repository.find(id);
-        }
-      }
-
-      // Act
-      const logger = new ConsoleLogger();
-      const repository = new InMemoryRepository();
-      const service = new AppointmentService(logger, repository);
-
-      const appointmentData = { id: '123', insuredId: '12345' };
-      service.createAppointment(appointmentData);
-      const retrieved = service.getAppointment('123');
-
-      // Assert
-      expect(retrieved).toEqual(appointmentData);
-      expect((logger as ConsoleLogger).getLogs()).toHaveLength(3);
-      expect((logger as ConsoleLogger).getLogs()[0]).toContain('Creating appointment: 123');
+      expect(CreateAppointmentUseCase).toHaveBeenCalledWith(
+        expect.any(DynamoDBAppointmentRepository),
+        expect.any(EventBridgeAdapter),
+        expect.any(MySQLScheduleRepository)
+      );
+      expect(result).toBe(mockUseCase);
     });
   });
 
-  describe('AWS Service Integration Patterns', () => {
-    it('should demonstrate adapter pattern for AWS services', () => {
-      // Adapter pattern allows incompatible interfaces to work together
-      interface IMessageService {
-        sendMessage(message: string): Promise<void>;
-      }
+  describe('createGetAppointmentsByInsuredIdUseCase', () => {
+    it('should create GetAppointmentsByInsuredIdUseCase with proper dependencies', () => {
+      const mockUseCase = {} as GetAppointmentsByInsuredIdUseCase;
+      (GetAppointmentsByInsuredIdUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
-      // Mock AWS SNS service
-      class MockSNSClient {
-        async publish(params: any): Promise<any> {
-          return { MessageId: 'mock-message-id' };
-        }
-      }
+      const result = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase();
 
-      // Adapter to make SNS work with our interface
-      class SNSAdapter implements IMessageService {
-        constructor(private snsClient: MockSNSClient) {}
-
-        async sendMessage(message: string): Promise<void> {
-          await this.snsClient.publish({
-            Message: message,
-            TopicArn: 'mock-topic-arn'
-          });
-        }
-      }
-
-      // Act
-      const snsClient = new MockSNSClient();
-      const adapter = new SNSAdapter(snsClient);
-
-      // Assert
-      expect(adapter).toBeDefined();
-      expect(() => adapter.sendMessage('test message')).not.toThrow();
-    });
-
-    it('should demonstrate configuration management', () => {
-      // Configuration management for different environments
-      interface IConfig {
-        getDatabaseUrl(): string;
-        getTopicArn(): string;
-        getRegion(): string;
-      }
-
-      class AWSConfig implements IConfig {
-        constructor(private env: Record<string, string | undefined>) {}
-
-        getDatabaseUrl(): string {
-          return this.env.DATABASE_URL || 'default-db-url';
-        }
-
-        getTopicArn(): string {
-          return this.env.APPOINTMENTS_TOPIC_ARN || 'default-topic-arn';
-        }
-
-        getRegion(): string {
-          return this.env.AWS_REGION || 'us-east-1';
-        }
-      }
-
-      // Act
-      const config = new AWSConfig(process.env);
-
-      // Assert
-      expect(config.getDatabaseUrl()).toBeDefined();
-      expect(config.getTopicArn()).toContain('arn:aws:sns');
-      expect(config.getRegion()).toBe('us-east-1');
+      expect(GetAppointmentsByInsuredIdUseCase).toHaveBeenCalledWith(
+        expect.any(DynamoDBAppointmentRepository)
+      );
+      expect(result).toBe(mockUseCase);
     });
   });
 
-  describe('Environment Configuration', () => {
-    it('should validate required environment variables', () => {
-      const requiredVars = [
-        'APPOINTMENTS_TABLE_NAME',
-        'APPOINTMENTS_TOPIC_ARN',
-        'EVENTBRIDGE_BUS_NAME',
-        'AWS_REGION'
-      ];
+  describe('createProcessAppointmentUseCase', () => {
+    it('should create ProcessAppointmentUseCase with MySQL dependencies', () => {
+      const mockUseCase = {} as ProcessAppointmentUseCase;
+      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
-      requiredVars.forEach(varName => {
-        expect(process.env[varName]).toBeDefined();
-        expect(process.env[varName]).not.toBe('');
-      });
-    });
+      const result = UseCaseFactory.createProcessAppointmentUseCase();
 
-    it('should handle environment variable validation', () => {
-      const validateConfig = (config: Record<string, string | undefined>): boolean => {
-        const requiredKeys = ['APPOINTMENTS_TABLE_NAME', 'AWS_REGION'];
-        return requiredKeys.every(key => config[key] && config[key]!.length > 0);
-      };
-
-      // Test valid configuration
-      const validConfig = {
-        APPOINTMENTS_TABLE_NAME: 'test-table',
-        AWS_REGION: 'us-east-1'
-      };
-
-      // Test invalid configuration
-      const invalidConfig = {
-        APPOINTMENTS_TABLE_NAME: '',
-        AWS_REGION: 'us-east-1'
-      };
-
-      expect(validateConfig(validConfig)).toBe(true);
-      expect(validateConfig(invalidConfig)).toBe(false);
+      expect(ProcessAppointmentUseCase).toHaveBeenCalledWith(
+        expect.any(MySQLAppointmentRepository),
+        expect.any(EventBridgeAdapter),
+        expect.any(MySQLScheduleRepository)
+      );
+      expect(result).toBe(mockUseCase);
     });
   });
 
-  describe('Error Handling Patterns', () => {
-    it('should demonstrate error handling in factory methods', () => {
-      class ErrorHandlingFactory {
-        static createService(type: string): any {
-          try {
-            switch (type) {
-              case 'valid':
-                return { type: 'valid', status: 'created' };
-              case 'error':
-                throw new Error('Service creation failed');
-              default:
-                throw new Error(`Unknown service type: ${type}`);
-            }
-          } catch (error) {
-            console.error('Factory error:', error);
-            throw error;
-          }
-        }
-      }
+  describe('createCompleteAppointmentUseCase', () => {
+    it('should create CompleteAppointmentUseCase with proper dependencies', () => {
+      const mockUseCase = {} as CompleteAppointmentUseCase;
+      (CompleteAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
-      // Test successful creation
-      const validService = ErrorHandlingFactory.createService('valid');
-      expect(validService.status).toBe('created');
+      const result = UseCaseFactory.createCompleteAppointmentUseCase();
 
-      // Test error scenarios
-      expect(() => ErrorHandlingFactory.createService('error')).toThrow('Service creation failed');
-      expect(() => ErrorHandlingFactory.createService('unknown')).toThrow('Unknown service type: unknown');
+      expect(CompleteAppointmentUseCase).toHaveBeenCalledWith(
+        expect.any(DynamoDBAppointmentRepository),
+        expect.any(EventBridgeAdapter)
+      );
+      expect(result).toBe(mockUseCase);
+    });
+  });
+
+  describe('getAppointmentRepository', () => {
+    it('should create and return DynamoDBAppointmentRepository instance', () => {
+      const mockRepository = {} as DynamoDBAppointmentRepository;
+      (DynamoDBAppointmentRepository as jest.Mock).mockReturnValue(mockRepository);
+
+      const result = UseCaseFactory.getAppointmentRepository();
+
+      expect(DynamoDBAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockRepository);
     });
 
-    it('should demonstrate retry patterns', () => {
-      class RetryableService {
-        private attemptCount = 0;
+    it('should return same instance on subsequent calls (singleton)', () => {
+      const mockRepository = {} as DynamoDBAppointmentRepository;
+      (DynamoDBAppointmentRepository as jest.Mock).mockReturnValue(mockRepository);
 
-        async operation(): Promise<string> {
-          this.attemptCount++;
-          
-          if (this.attemptCount < 3) {
-            throw new Error('Temporary failure');
-          }
-          
-          return 'Success';
-        }
+      const result1 = UseCaseFactory.getAppointmentRepository();
+      const result2 = UseCaseFactory.getAppointmentRepository();
 
-        reset(): void {
-          this.attemptCount = 0;
-        }
-      }
+      expect(DynamoDBAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockRepository);
+    });
+  });
 
-      const retry = async <T>(
-        fn: () => Promise<T>,
-        maxAttempts: number = 3,
-        delay: number = 0
-      ): Promise<T> => {
-        let lastError: Error;
-        
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          try {
-            return await fn();
-          } catch (error) {
-            lastError = error as Error;
-            if (attempt === maxAttempts) break;
-            if (delay > 0) {
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-          }
-        }
-        
-        throw lastError!;
-      };
+  describe('getMySQLAppointmentRepository', () => {
+    it('should create and return MySQLAppointmentRepository instance', () => {
+      const mockRepository = {} as MySQLAppointmentRepository;
+      (MySQLAppointmentRepository as jest.Mock).mockReturnValue(mockRepository);
 
-      // Test retry mechanism
-      const service = new RetryableService();
-      
-      expect(retry(() => service.operation())).resolves.toBe('Success');
+      const result = UseCaseFactory.getMySQLAppointmentRepository();
+
+      expect(MySQLAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockRepository);
+    });
+
+    it('should return same instance on subsequent calls (singleton)', () => {
+      const mockRepository = {} as MySQLAppointmentRepository;
+      (MySQLAppointmentRepository as jest.Mock).mockReturnValue(mockRepository);
+
+      const result1 = UseCaseFactory.getMySQLAppointmentRepository();
+      const result2 = UseCaseFactory.getMySQLAppointmentRepository();
+
+      expect(MySQLAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockRepository);
+    });
+  });
+
+  describe('getScheduleRepository', () => {
+    it('should create and return MySQLScheduleRepository instance', () => {
+      const mockRepository = {} as MySQLScheduleRepository;
+      (MySQLScheduleRepository as jest.Mock).mockReturnValue(mockRepository);
+
+      const result = UseCaseFactory.getScheduleRepository();
+
+      expect(MySQLScheduleRepository).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockRepository);
+    });
+
+    it('should return same instance on subsequent calls (singleton)', () => {
+      const mockRepository = {} as MySQLScheduleRepository;
+      (MySQLScheduleRepository as jest.Mock).mockReturnValue(mockRepository);
+
+      const result1 = UseCaseFactory.getScheduleRepository();
+      const result2 = UseCaseFactory.getScheduleRepository();
+
+      expect(MySQLScheduleRepository).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockRepository);
+    });
+  });
+
+  describe('getSNSAdapter', () => {
+    it('should create and return SNSAdapter instance', () => {
+      const mockAdapter = {} as SNSAdapter;
+      (SNSAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+      const result = UseCaseFactory.getSNSAdapter();
+
+      expect(SNSAdapter).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockAdapter);
+    });
+
+    it('should return same instance on subsequent calls (singleton)', () => {
+      const mockAdapter = {} as SNSAdapter;
+      (SNSAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+      const result1 = UseCaseFactory.getSNSAdapter();
+      const result2 = UseCaseFactory.getSNSAdapter();
+
+      expect(SNSAdapter).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockAdapter);
+    });
+  });
+
+  describe('getSQSAdapter', () => {
+    it('should create and return SQSAdapter instance', () => {
+      const mockAdapter = {} as SQSAdapter;
+      (SQSAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+      const result = UseCaseFactory.getSQSAdapter();
+
+      expect(SQSAdapter).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockAdapter);
+    });
+
+    it('should return same instance on subsequent calls (singleton)', () => {
+      const mockAdapter = {} as SQSAdapter;
+      (SQSAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+      const result1 = UseCaseFactory.getSQSAdapter();
+      const result2 = UseCaseFactory.getSQSAdapter();
+
+      expect(SQSAdapter).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockAdapter);
+    });
+  });
+
+  describe('getEventBridgeAdapter', () => {
+    it('should create and return EventBridgeAdapter instance', () => {
+      const mockAdapter = {} as EventBridgeAdapter;
+      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+      const result = UseCaseFactory.getEventBridgeAdapter();
+
+      expect(EventBridgeAdapter).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockAdapter);
+    });
+
+    it('should return same instance on subsequent calls (singleton)', () => {
+      const mockAdapter = {} as EventBridgeAdapter;
+      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockAdapter);
+
+      const result1 = UseCaseFactory.getEventBridgeAdapter();
+      const result2 = UseCaseFactory.getEventBridgeAdapter();
+
+      expect(EventBridgeAdapter).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockAdapter);
+    });
+  });
+
+  describe('reset', () => {
+    it('should reset all singleton instances', () => {
+      // First, create instances
+      const mockDynamoRepo = {} as DynamoDBAppointmentRepository;
+      const mockMySQLRepo = {} as MySQLAppointmentRepository;
+      const mockScheduleRepo = {} as MySQLScheduleRepository;
+      const mockSNS = {} as SNSAdapter;
+      const mockSQS = {} as SQSAdapter;
+      const mockEventBridge = {} as EventBridgeAdapter;
+
+      (DynamoDBAppointmentRepository as jest.Mock).mockReturnValue(mockDynamoRepo);
+      (MySQLAppointmentRepository as jest.Mock).mockReturnValue(mockMySQLRepo);
+      (MySQLScheduleRepository as jest.Mock).mockReturnValue(mockScheduleRepo);
+      (SNSAdapter as jest.Mock).mockReturnValue(mockSNS);
+      (SQSAdapter as jest.Mock).mockReturnValue(mockSQS);
+      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockEventBridge);
+
+      // Create instances
+      UseCaseFactory.getAppointmentRepository();
+      UseCaseFactory.getMySQLAppointmentRepository();
+      UseCaseFactory.getScheduleRepository();
+      UseCaseFactory.getSNSAdapter();
+      UseCaseFactory.getSQSAdapter();
+      UseCaseFactory.getEventBridgeAdapter();
+
+      // Clear mock calls from initial creation
+      jest.clearAllMocks();
+
+      // Reset factory
+      UseCaseFactory.reset();
+
+      // Create instances again - should create new ones
+      UseCaseFactory.getAppointmentRepository();
+      UseCaseFactory.getMySQLAppointmentRepository();
+      UseCaseFactory.getScheduleRepository();
+      UseCaseFactory.getSNSAdapter();
+      UseCaseFactory.getSQSAdapter();
+      UseCaseFactory.getEventBridgeAdapter();
+
+      // Verify new instances were created
+      expect(DynamoDBAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(MySQLAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(MySQLScheduleRepository).toHaveBeenCalledTimes(1);
+      expect(SNSAdapter).toHaveBeenCalledTimes(1);
+      expect(SQSAdapter).toHaveBeenCalledTimes(1);
+      expect(EventBridgeAdapter).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('integration behavior', () => {
+    it('should use same repository instances across different use case creations', () => {
+      const mockDynamoRepo = {} as DynamoDBAppointmentRepository;
+      const mockMySQLRepo = {} as MySQLAppointmentRepository;
+      const mockScheduleRepo = {} as MySQLScheduleRepository;
+      const mockEventBridge = {} as EventBridgeAdapter;
+      const mockCreateUseCase = {} as CreateAppointmentUseCase;
+      const mockGetUseCase = {} as GetAppointmentsByInsuredIdUseCase;
+      const mockProcessUseCase = {} as ProcessAppointmentUseCase;
+      const mockCompleteUseCase = {} as CompleteAppointmentUseCase;
+
+      (DynamoDBAppointmentRepository as jest.Mock).mockReturnValue(mockDynamoRepo);
+      (MySQLAppointmentRepository as jest.Mock).mockReturnValue(mockMySQLRepo);
+      (MySQLScheduleRepository as jest.Mock).mockReturnValue(mockScheduleRepo);
+      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockEventBridge);
+      (CreateAppointmentUseCase as jest.Mock).mockReturnValue(mockCreateUseCase);
+      (GetAppointmentsByInsuredIdUseCase as jest.Mock).mockReturnValue(mockGetUseCase);
+      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockProcessUseCase);
+      (CompleteAppointmentUseCase as jest.Mock).mockReturnValue(mockCompleteUseCase);
+
+      // Create multiple use cases
+      const createUseCase = UseCaseFactory.createCreateAppointmentUseCase();
+      const getUseCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase();
+      const processUseCase = UseCaseFactory.createProcessAppointmentUseCase();
+      const completeUseCase = UseCaseFactory.createCompleteAppointmentUseCase();
+
+      // Verify singleton behavior - repositories should be created only once
+      expect(DynamoDBAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(MySQLAppointmentRepository).toHaveBeenCalledTimes(1);
+      expect(MySQLScheduleRepository).toHaveBeenCalledTimes(1);
+      expect(EventBridgeAdapter).toHaveBeenCalledTimes(1);
+
+      // Verify use cases were created
+      expect(CreateAppointmentUseCase).toHaveBeenCalledTimes(1);
+      expect(GetAppointmentsByInsuredIdUseCase).toHaveBeenCalledTimes(1);
+      expect(ProcessAppointmentUseCase).toHaveBeenCalledTimes(1);
+      expect(CompleteAppointmentUseCase).toHaveBeenCalledTimes(1);
+
+      expect(createUseCase).toBe(mockCreateUseCase);
+      expect(getUseCase).toBe(mockGetUseCase);
+      expect(processUseCase).toBe(mockProcessUseCase);
+      expect(completeUseCase).toBe(mockCompleteUseCase);
+    });
+
+    it('should properly inject dependencies for CreateAppointmentUseCase', () => {
+      const mockCreateUseCase = {} as CreateAppointmentUseCase;
+      (CreateAppointmentUseCase as jest.Mock).mockReturnValue(mockCreateUseCase);
+
+      UseCaseFactory.createCreateAppointmentUseCase();
+
+      expect(CreateAppointmentUseCase).toHaveBeenCalledWith(
+        {},
+        {},
+        {}
+      );
+    });
+
+    it('should properly inject dependencies for ProcessAppointmentUseCase', () => {
+      const mockProcessUseCase = {} as ProcessAppointmentUseCase;
+      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockProcessUseCase);
+
+      UseCaseFactory.createProcessAppointmentUseCase();
+
+      expect(ProcessAppointmentUseCase).toHaveBeenCalledWith(
+        {},
+        {},
+        {}
+      );
+    });
+
+    it('should allow independent access to adapters', () => {
+      const mockSNS = {} as SNSAdapter;
+      const mockSQS = {} as SQSAdapter;
+      const mockEventBridge = {} as EventBridgeAdapter;
+
+      (SNSAdapter as jest.Mock).mockReturnValue(mockSNS);
+      (SQSAdapter as jest.Mock).mockReturnValue(mockSQS);
+      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockEventBridge);
+
+      const snsAdapter = UseCaseFactory.getSNSAdapter();
+      const sqsAdapter = UseCaseFactory.getSQSAdapter();
+      const eventBridgeAdapter = UseCaseFactory.getEventBridgeAdapter();
+
+      expect(snsAdapter).toBe(mockSNS);
+      expect(sqsAdapter).toBe(mockSQS);
+      expect(eventBridgeAdapter).toBe(mockEventBridge);
+
+      expect(SNSAdapter).toHaveBeenCalledTimes(1);
+      expect(SQSAdapter).toHaveBeenCalledTimes(1);
+      expect(EventBridgeAdapter).toHaveBeenCalledTimes(1);
     });
   });
 });

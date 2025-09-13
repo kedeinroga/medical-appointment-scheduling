@@ -24,4 +24,5 @@ process.env.RDS_HOST = 'localhost';
 process.env.RDS_DATABASE = 'test_medical_appointments';
 process.env.RDS_USERNAME = 'test';
 process.env.RDS_PASSWORD = 'test';
+process.env.RDS_PORT = '3306';
 process.env.LOG_LEVEL = 'SILENT';

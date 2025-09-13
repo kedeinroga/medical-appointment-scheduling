@@ -20,7 +20,7 @@
     "remove:infrastructure": "cd infrastructure && serverless remove --stage dev",
     "remove:infrastructure:prod": "cd infrastructure && serverless remove --stage prod",
     "test": "jest --testPathPattern=__tests__ --testPathIgnorePatterns='test.constants.ts|test.factories.ts'",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "jest --testPathPattern=__tests__ --testPathIgnorePatterns='test.constants.ts|test.factories.ts' --coverage",
     "test:unit": "jest --testPathPattern=__tests__ --testPathIgnorePatterns='test.constants.ts|test.factories.ts'",
     "test:ci": "jest --testPathPattern=__tests__ --testPathIgnorePatterns='test.constants.ts|test.factories.ts' --coverage --ci",
     "test:integration": "jest --testPathPattern=test/integration --verbose",
