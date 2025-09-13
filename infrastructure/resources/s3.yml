@@ -3,7 +3,8 @@ Resources:
   ServerlessDeploymentBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: medical-appointment-serverless-${self:provider.stage}-${aws:accountId}
+      # Use existing bucket name format to avoid conflicts
+      # BucketName: medical-appointment-serverless-${self:provider.stage}-${aws:accountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
