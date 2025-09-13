@@ -51,7 +51,6 @@ Resources:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
         SSEEnabled: true
-        KMSMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.kmsKeyId}
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
