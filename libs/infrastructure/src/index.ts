@@ -22,7 +22,7 @@ export * from './config/environment.config';
 // Factories
 export * from './factories/adapter.factory';
 export * from './factories/country-processing.factory';
-export * from './factories/use-case.factory';
+export * from './factories/infrastructure-bridge.factory';
 
 // Errors
 export * from './errors/aws.errors';

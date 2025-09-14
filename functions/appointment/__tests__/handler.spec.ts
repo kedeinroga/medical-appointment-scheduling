@@ -9,9 +9,9 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
   })),
 }));
 
-// Mock the use case factory
+// Mock the infrastructure bridge factory
 jest.mock('@medical-appointment/infrastructure', () => ({
-  UseCaseFactory: {
+  InfrastructureBridgeFactory: {
     createCreateAppointmentUseCase: jest.fn().mockReturnValue({
       execute: jest.fn().mockResolvedValue({
         appointmentId: 'test-id',

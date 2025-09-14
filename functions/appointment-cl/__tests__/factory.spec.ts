@@ -107,12 +107,11 @@ describe(DependencyFactory.name, () => {
     });
 
     it('should handle dependency creation errors gracefully', () => {
-      const mockUseCaseFactory = require('@medical-appointment/infrastructure');
-      mockUseCaseFactory.UseCaseFactory = {
-        getAppointmentRepository: jest.fn().mockImplementation(() => {
+      const mockInfrastructureBridgeFactory = require('@medical-appointment/infrastructure');
+      mockInfrastructureBridgeFactory.InfrastructureBridgeFactory = {
+        createProcessCountryAppointmentUseCase: jest.fn().mockImplementation(() => {
           throw new Error('Repository creation failed');
-        }),
-        createProcessAppointmentUseCase: jest.fn()
+        })
       };
 
       const factory = DependencyFactory.getInstance();
@@ -143,10 +142,12 @@ describe(DependencyFactory.name, () => {
       jest.clearAllMocks();
       
       // Setup successful mocks
-      const mockUseCaseFactory = require('@medical-appointment/infrastructure');
-      mockUseCaseFactory.UseCaseFactory = {
-        getAppointmentRepository: jest.fn().mockReturnValue({}),
-        createProcessAppointmentUseCase: jest.fn().mockReturnValue({})
+      const mockInfrastructureBridgeFactory = require('@medical-appointment/infrastructure');
+      mockInfrastructureBridgeFactory.InfrastructureBridgeFactory = {
+        createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue({})
+      };
+      mockInfrastructureBridgeFactory.AdapterFactory = {
+        createMySQLAppointmentRepository: jest.fn().mockReturnValue({})
       };
     });
 

@@ -9,16 +9,19 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
   })),
 }));
 
-// Mock the country processing factory
+// Mock the infrastructure bridge factory
 jest.mock('@medical-appointment/infrastructure', () => ({
-  CountryProcessingFactory: {
-    createProcessAppointmentUseCase: jest.fn().mockReturnValue({
+  InfrastructureBridgeFactory: {
+    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue({
       execute: jest.fn().mockResolvedValue({
         appointmentId: 'test-id',
         status: 'processed',
         message: 'Appointment processed for PE'
       })
     })
+  },
+  CountryProcessingFactory: {
+    createProcessAppointmentUseCase: jest.fn()
   }
 }));
 
@@ -82,8 +85,8 @@ describe('Appointment PE Lambda Handler', () => {
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
       // Verify that the factory method was called (indicating the handler processed the message)
-      const { CountryProcessingFactory } = require('@medical-appointment/infrastructure');
-      expect(CountryProcessingFactory.createProcessAppointmentUseCase).toHaveBeenCalled();
+      const { InfrastructureBridgeFactory } = require('@medical-appointment/infrastructure');
+      expect(InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase).toHaveBeenCalled();
     });
 
     it('should skip message for wrong country', async () => {
@@ -99,8 +102,8 @@ describe('Appointment PE Lambda Handler', () => {
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
       // Should not call the use case factory for wrong country
-      const { CountryProcessingFactory } = require('@medical-appointment/infrastructure');
-      expect(CountryProcessingFactory.createProcessAppointmentUseCase).not.toHaveBeenCalled();
+      const { InfrastructureBridgeFactory } = require('@medical-appointment/infrastructure');
+      expect(InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase).not.toHaveBeenCalled();
     });
 
     it('should handle validation errors gracefully', async () => {
@@ -115,8 +118,8 @@ describe('Appointment PE Lambda Handler', () => {
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
       // Should not call the use case when validation fails
-      const { CountryProcessingFactory } = require('@medical-appointment/infrastructure');
-      expect(CountryProcessingFactory.createProcessAppointmentUseCase).not.toHaveBeenCalled();
+      const { InfrastructureBridgeFactory } = require('@medical-appointment/infrastructure');
+      expect(InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase).not.toHaveBeenCalled();
     });
 
     it('should handle invalid JSON gracefully', async () => {
@@ -144,7 +147,7 @@ describe('Appointment PE Lambda Handler', () => {
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
       // Should not call the use case when JSON is invalid
-      const mockUseCase = require('@medical-appointment/infrastructure').CountryProcessingFactory.createProcessAppointmentUseCase();
+      const mockUseCase = require('@medical-appointment/infrastructure').InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase();
       expect(mockUseCase.execute).not.toHaveBeenCalled();
     });
   });

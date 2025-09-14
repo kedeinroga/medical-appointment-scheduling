@@ -24,7 +24,7 @@ import {
 
 
 // Infrastructure layer
-import { UseCaseFactory } from '@medical-appointment/infrastructure';
+import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure';
 
 // Same layer modules (alphabetical)
 import { 
@@ -48,8 +48,8 @@ const logger = new Logger({
 });
 
 // Initialize dependencies
-const createAppointmentUseCase = UseCaseFactory.createCreateAppointmentUseCase();
-const getAppointmentsUseCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase();
+const createAppointmentUseCase = InfrastructureBridgeFactory.createCreateAppointmentUseCase();
+const getAppointmentsUseCase = InfrastructureBridgeFactory.createGetAppointmentsByInsuredIdUseCase();
 
 /**
  * Handle POST /appointments - Create new appointment
@@ -314,7 +314,7 @@ const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> 
       recordCount: event.Records.length
     });
 
-    const completeAppointmentUseCase = UseCaseFactory.createCompleteAppointmentUseCase();
+    const completeAppointmentUseCase = InfrastructureBridgeFactory.createCompleteAppointmentUseCase();
 
     for (const record of event.Records) {
       try {

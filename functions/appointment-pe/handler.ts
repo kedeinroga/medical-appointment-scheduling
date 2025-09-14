@@ -14,7 +14,8 @@ import { ProcessCountryAppointmentDto } from '@medical-appointment/core-use-case
 import { ValidationError } from '@medical-appointment/shared';
 
 // Infrastructure layer
-import { CountryProcessingFactory } from '@medical-appointment/infrastructure';
+import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure';
+import { CountryISO } from '@medical-appointment/core-domain';
 
 // Handler layer imports
 import { COUNTRY_PROCESSING, LOG_EVENTS } from './constants';
@@ -50,7 +51,8 @@ class DependencyFactory {
     
     const getProcessAppointmentUseCase = () => {
       if (!processAppointmentUseCase) {
-        processAppointmentUseCase = CountryProcessingFactory.createProcessAppointmentUseCase();
+        const countryISO = CountryISO.fromString('PE');
+        processAppointmentUseCase = InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase(countryISO);
       }
       return processAppointmentUseCase;
     };

@@ -21,4 +21,8 @@ export * from './process-country-appointment/process-country-appointment.use-cas
 export * from './complete-appointment/complete-appointment.dto';
 export * from './complete-appointment/complete-appointment.use-case';
 
+// Factories
+export * from './factories/use-case.factory';
+export * from './factories/country-processing-composition.factory';
+
 export const USE_CASES_LAYER_VERSION = '1.0.0';

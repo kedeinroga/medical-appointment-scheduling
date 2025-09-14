@@ -1,6 +1,3 @@
-// Use Cases imports
-import { ProcessCountryAppointmentUseCase } from '@medical-appointment/core-use-cases';
-
 // Domain imports
 import { CountryISO } from '@medical-appointment/core-domain';
 
@@ -10,25 +7,16 @@ import { MySQLScheduleRepository } from '../adapters/repositories/mysql-schedule
 import { EventBridgeAdapter } from '../adapters/messaging/eventbridge.adapter';
 
 /**
- * Factory specifically for country-specific processing lambdas (appointment_pe, appointment_cl)
+ * Factory specifically for country-specific processing infrastructure adapters
+ * This factory belongs to the infrastructure layer and creates only adapters/repositories
+ * 
  * Uses MySQL repositories instead of DynamoDB for persistence according to business requirements
+ * for country-specific processing (appointment_pe, appointment_cl lambdas)
  */
 export class CountryProcessingFactory {
   private static mysqlAppointmentRepository: MySQLAppointmentRepository;
   private static scheduleRepository: MySQLScheduleRepository;
   private static eventBridgeAdapter: EventBridgeAdapter;
-
-  /**
-   * Creates a ProcessCountryAppointmentUseCase configured for country-specific processing
-   * Uses MySQL repositories as required by the business flow
-   */
-  public static createProcessAppointmentUseCase(countryISO?: CountryISO): ProcessCountryAppointmentUseCase {
-    return new ProcessCountryAppointmentUseCase(
-      this.getMySQLAppointmentRepository(),
-      this.getEventBridgeAdapter(),
-      this.getScheduleRepository()
-    );
-  }
 
   /**
    * Gets or creates a MySQL appointment repository instance
@@ -62,14 +50,14 @@ export class CountryProcessingFactory {
   }
 
   /**
-   * Creates all adapters needed for country processing
+   * Creates all infrastructure adapters needed for country processing
+   * This method only creates adapters, not use cases
    */
-  public static createCountryProcessingDependencies(countryISO: CountryISO) {
+  public static createCountryProcessingAdapters(countryISO: CountryISO) {
     return {
       appointmentRepository: this.getMySQLAppointmentRepository(),
       scheduleRepository: this.getScheduleRepository(),
-      eventBridgeAdapter: this.getEventBridgeAdapter(),
-      processAppointmentUseCase: this.createProcessAppointmentUseCase(countryISO)
+      eventBridgeAdapter: this.getEventBridgeAdapter()
     };
   }
 

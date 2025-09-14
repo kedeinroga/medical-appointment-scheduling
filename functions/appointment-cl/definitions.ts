@@ -5,7 +5,7 @@
 
 import { SQSEvent, SQSRecord, Context } from 'aws-lambda';
 import { Logger } from '@aws-lambda-powertools/logger';
-import { ProcessAppointmentUseCase } from '@medical-appointment/core-use-cases';
+import { ProcessCountryAppointmentUseCase } from '@medical-appointment/core-use-cases';
 import { IAppointmentRepository } from '@medical-appointment/core-domain';
 
 /**
@@ -14,7 +14,7 @@ import { IAppointmentRepository } from '@medical-appointment/core-domain';
  */
 export interface HandlerDependencies {
   // Use cases
-  processAppointmentUseCase: ProcessAppointmentUseCase;
+  processAppointmentUseCase: ProcessCountryAppointmentUseCase;
   
   // Infrastructure services
   appointmentRepository: IAppointmentRepository;

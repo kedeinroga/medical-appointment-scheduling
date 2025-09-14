@@ -4,8 +4,9 @@
  */
 
 import { Logger } from '@aws-lambda-powertools/logger';
-import { ProcessAppointmentUseCase } from '@medical-appointment/core-use-cases';
-import { UseCaseFactory } from '@medical-appointment/infrastructure';
+import { ProcessCountryAppointmentUseCase } from '@medical-appointment/core-use-cases';
+import { InfrastructureBridgeFactory, AdapterFactory } from '@medical-appointment/infrastructure';
+import { CountryISO } from '@medical-appointment/core-domain';
 import { HandlerDependencies, HandlerConfig, HANDLER_CONSTANTS } from './definitions';
 
 /**
@@ -45,10 +46,11 @@ export class DependencyFactory {
     });
 
     // Step 2: Create infrastructure layer dependencies (repositories, adapters)
-    const appointmentRepository = UseCaseFactory.getAppointmentRepository();
+    const appointmentRepository = AdapterFactory.createMySQLAppointmentRepository();
 
     // Step 3: Create use cases with injected dependencies
-    const processAppointmentUseCase = UseCaseFactory.createProcessAppointmentUseCase();
+    const countryISO = CountryISO.fromString(HANDLER_CONSTANTS.TARGET_COUNTRY);
+    const processAppointmentUseCase = InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase(countryISO);
 
     // Step 4: Assemble all dependencies
     this.dependencies = {

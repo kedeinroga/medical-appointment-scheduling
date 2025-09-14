@@ -7,7 +7,7 @@ import { CreateAppointmentDto, GetAppointmentsDto } from '@medical-appointment/c
 
 // Infrastructure imports
 import { ValidationError } from '../../errors/aws.errors';
-import { UseCaseFactory } from '../../factories/use-case.factory';
+import { InfrastructureBridgeFactory } from '../../factories/infrastructure-bridge.factory';
 
 /**
  * Lambda Handler Adapter for API Gateway and SQS events
@@ -120,7 +120,7 @@ export class LambdaHandlerAdapter {
         scheduleId: requestData.scheduleId
       };
 
-      const useCase = UseCaseFactory.createCreateAppointmentUseCase();
+      const useCase = InfrastructureBridgeFactory.createCreateAppointmentUseCase();
       const result = await useCase.execute(dto);
 
       this.logger.info('Appointment created successfully', {
@@ -167,7 +167,7 @@ export class LambdaHandlerAdapter {
         insuredId
       };
 
-      const useCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase();
+      const useCase = InfrastructureBridgeFactory.createGetAppointmentsByInsuredIdUseCase();
       const result = await useCase.execute(dto);
 
       this.logger.info('Appointments retrieved successfully', {
