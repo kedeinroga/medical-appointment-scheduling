@@ -79,7 +79,7 @@ graph TB
     
     subgraph "💾 Data Storage"
         DDB[DynamoDB<br/>Appointments Table]
-        RDS[RDS PostgreSQL<br/>Clinical Data]
+        RDS[RDS MySQL<br/>Clinical Data]
     end
     
     %% Request Flow
