@@ -131,6 +131,17 @@ medical-appointment-scheduling/
 │   ├── 📁 appointment-pe/            # Peru processor
 │   └── 📁 appointment-cl/            # Chile processor
 │
+├── 📁 infrastructure/                # 🔌 Infrastructure as Code (IaC)
+│   ├── 📁 resources/                 # 📦 Cloud resources
+│   │   ├── outputs.yml               # CloudFormation outputs
+│   │   ├── parameter-store.yml       # DynamoDB tables
+│   │   ├── rds.yml                   # RDS instances
+│   │   └── s3.yml                    # S3 buckets
+│   ├── 📁 scripts/                   # 🔨 Deployment & utility scripts
+│   │   ├── create-database.sql       # Database creation script
+│   │   └── seed-data.sql             # Database seeding script
+│   └── serverless.yml                # Infrastructure stack
+│
 ├── 📁 libs/                          # 📚 Clean Architecture layers
 │   ├── 📁 core/                      # Core business logic
 │   │   ├── 📁 domain/                # 🏢 Business entities & rules
@@ -179,13 +190,15 @@ medical-appointment-scheduling/
 │   └── test.sh                       # Testing script
 │
 ├── 📁 test/                          # 🧪 Integration tests
-│   └── integration/                  # End-to-end tests
+│   ├── e2e/                          # End-to-end tests
+│   └── integration/                  # Integration tests
 │
 ├── 📁 docs/                          # 📖 Documentation
 │   ├── openapi.yml                   # OpenAPI/Swagger spec
+│   ├── swagger.json                  # Swagger JSON spec
 │   └── INFRASTRUCTURE.md             # Infrastructure docs
 │
-└── 📁 assets/                        # 📋 Project assets
+└── 📁 static/                        # 📋 Project static
     ├── REQUIREMENTS.md               # Business requirements
     └── diagrama.png                  # Architecture diagram
 ```
