@@ -34,7 +34,6 @@ describe('InfrastructureBridgeFactory', () => {
     mockUseCaseFactory = UseCaseFactory as jest.Mocked<typeof UseCaseFactory>;
     mockUseCaseFactory.createCreateAppointmentUseCase = jest.fn();
     mockUseCaseFactory.createGetAppointmentsByInsuredIdUseCase = jest.fn();
-    mockUseCaseFactory.createProcessAppointmentUseCase = jest.fn();
     mockUseCaseFactory.createCompleteAppointmentUseCase = jest.fn();
 
     // Mock CountryProcessingCompositionFactory
@@ -92,35 +91,6 @@ describe('InfrastructureBridgeFactory', () => {
       expect(mockUseCaseFactory.createGetAppointmentsByInsuredIdUseCase).toHaveBeenCalledWith(
         mockDynamoRepository,
         mockMySQLRepository
-      );
-      expect(result).toBe(mockUseCase);
-    });
-  });
-
-  describe('createProcessAppointmentUseCase', () => {
-    it('should create ProcessAppointmentUseCase with proper dependencies', () => {
-      // Arrange
-      const mockRepository = {} as any;
-      const mockEventBus = {} as any;
-      const mockScheduleRepository = {} as any;
-      const mockUseCase = {} as any;
-
-      mockAdapterFactory.createAppointmentRepository.mockReturnValue(mockRepository);
-      mockAdapterFactory.createEventBridgeAdapter.mockReturnValue(mockEventBus);
-      mockAdapterFactory.createScheduleRepository.mockReturnValue(mockScheduleRepository);
-      mockUseCaseFactory.createProcessAppointmentUseCase.mockReturnValue(mockUseCase);
-
-      // Act
-      const result = InfrastructureBridgeFactory.createProcessAppointmentUseCase();
-
-      // Assert
-      expect(mockAdapterFactory.createAppointmentRepository).toHaveBeenCalled();
-      expect(mockAdapterFactory.createEventBridgeAdapter).toHaveBeenCalled();
-      expect(mockAdapterFactory.createScheduleRepository).toHaveBeenCalled();
-      expect(mockUseCaseFactory.createProcessAppointmentUseCase).toHaveBeenCalledWith(
-        mockRepository,
-        mockEventBus,
-        mockScheduleRepository
       );
       expect(result).toBe(mockUseCase);
     });

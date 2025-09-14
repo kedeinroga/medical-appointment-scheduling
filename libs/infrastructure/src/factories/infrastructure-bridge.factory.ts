@@ -49,21 +49,6 @@ export class InfrastructureBridgeFactory {
   }
 
   /**
-   * Creates a ProcessAppointmentUseCase with all infrastructure dependencies injected
-   */
-  public static createProcessAppointmentUseCase() {
-    const appointmentRepository = AdapterFactory.createAppointmentRepository();
-    const eventBus = AdapterFactory.createEventBridgeAdapter(); // Implements IEventBus
-    const scheduleRepository = AdapterFactory.createScheduleRepository();
-
-    return UseCaseFactory.createProcessAppointmentUseCase(
-      appointmentRepository,
-      eventBus,
-      scheduleRepository
-    );
-  }
-
-  /**
    * Creates a CompleteAppointmentUseCase with all infrastructure dependencies injected
    */
   public static createCompleteAppointmentUseCase() {

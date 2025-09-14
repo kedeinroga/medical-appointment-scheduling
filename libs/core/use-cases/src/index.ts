@@ -9,10 +9,6 @@ export * from './create-appointment/create-appointment.use-case';
 export * from './get-appointments/get-appointments.dto';
 export * from './get-appointments/get-appointments.use-case';
 
-// Process Appointment Use Case
-export * from './process-appointment/process-appointment.dto';
-export * from './process-appointment/process-appointment.use-case';
-
 // Process Country Appointment Use Case
 export * from './process-country-appointment/process-country-appointment.dto';
 export * from './process-country-appointment/process-country-appointment.use-case';

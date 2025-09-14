@@ -2,7 +2,6 @@
 import { 
   CreateAppointmentUseCase, 
   GetAppointmentsByInsuredIdUseCase,
-  ProcessAppointmentUseCase,
   CompleteAppointmentUseCase 
 } from '../index';
 
@@ -57,25 +56,6 @@ export class UseCaseFactory {
     return new GetAppointmentsByInsuredIdUseCase(
       dynamoRepository,
       mysqlRepository
-    );
-  }
-
-  /**
-   * Creates a ProcessAppointmentUseCase with all dependencies injected
-   * Uses DynamoDB repository for main appointment processing
-   * @param appointmentRepository - Repository for appointment persistence
-   * @param eventBus - Event bus for publishing domain events
-   * @param scheduleRepository - Repository for schedule validation
-   */
-  public static createProcessAppointmentUseCase(
-    appointmentRepository: IAppointmentRepository,
-    eventBus: IEventBus,
-    scheduleRepository: IScheduleRepository
-  ): ProcessAppointmentUseCase {
-    return new ProcessAppointmentUseCase(
-      appointmentRepository,
-      eventBus,
-      scheduleRepository
     );
   }
 

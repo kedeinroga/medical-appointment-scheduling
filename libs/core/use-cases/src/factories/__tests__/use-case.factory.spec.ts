@@ -1,7 +1,6 @@
 import { UseCaseFactory } from '../use-case.factory';
 import { CreateAppointmentUseCase } from '../../create-appointment/create-appointment.use-case';
 import { GetAppointmentsByInsuredIdUseCase } from '../../get-appointments/get-appointments.use-case';
-import { ProcessAppointmentUseCase } from '../../process-appointment/process-appointment.use-case';
 import { CompleteAppointmentUseCase } from '../../complete-appointment/complete-appointment.use-case';
 import { IAppointmentRepository } from '../../../../domain/src/repositories/appointment.repository';
 import { IScheduleRepository } from '../../../../domain/src/repositories/schedule.repository';
@@ -11,7 +10,6 @@ import { IEventBus } from '../../../../domain/src/ports/event-bus.port';
 // Mock the use cases
 jest.mock('../../create-appointment/create-appointment.use-case');
 jest.mock('../../get-appointments/get-appointments.use-case');
-jest.mock('../../process-appointment/process-appointment.use-case');
 jest.mock('../../complete-appointment/complete-appointment.use-case');
 
 describe('UseCaseFactory', () => {
@@ -71,29 +69,6 @@ describe('UseCaseFactory', () => {
       expect(GetAppointmentsByInsuredIdUseCase).toHaveBeenCalledWith(
         mockDynamoRepository,
         mockMySQLRepository
-      );
-      expect(result).toBe(mockUseCase);
-    });
-  });
-
-  describe('createProcessAppointmentUseCase', () => {
-    it('should create ProcessAppointmentUseCase with proper dependencies', () => {
-      // Arrange
-      const mockUseCase = {} as ProcessAppointmentUseCase;
-      (ProcessAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
-
-      // Act
-      const result = UseCaseFactory.createProcessAppointmentUseCase(
-        mockAppointmentRepository,
-        mockEventBus,
-        mockScheduleRepository
-      );
-
-      // Assert
-      expect(ProcessAppointmentUseCase).toHaveBeenCalledWith(
-        mockAppointmentRepository,
-        mockEventBus,
-        mockScheduleRepository
       );
       expect(result).toBe(mockUseCase);
     });
@@ -161,10 +136,9 @@ describe('UseCaseFactory', () => {
       };
 
       expect(() => 
-        UseCaseFactory.createProcessAppointmentUseCase(
+        UseCaseFactory.createCompleteAppointmentUseCase(
           mockAppointmentRepository,
-          validEventBus,
-          mockScheduleRepository
+          validEventBus
         )
       ).not.toThrow();
     });
