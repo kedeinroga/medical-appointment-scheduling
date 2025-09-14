@@ -6,6 +6,7 @@ import { CountryISO } from '../../../../../core/domain/src/value-objects/country
 import { Schedule } from '../../../../../core/domain/src/entities/schedule.entity';
 import { AWS_CONFIG } from '../../../config/aws.config';
 import { DatabaseConnectionError } from '../../../errors/aws.errors';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 // Mock dependencies
 jest.mock('mysql2/promise');
@@ -29,6 +30,7 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
+    clearSingletonInstances(); // Clear singleton instances between tests
 
     // Mock pool and connection
     mockConnection = {

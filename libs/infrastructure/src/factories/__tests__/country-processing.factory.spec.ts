@@ -3,10 +3,12 @@ import { MySQLAppointmentRepository } from '../../adapters/repositories/mysql-ap
 import { MySQLScheduleRepository } from '../../adapters/repositories/mysql-schedule.repository';
 import { EventBridgeAdapter } from '../../adapters/messaging/eventbridge.adapter';
 import { CountryISO } from '../../../../../libs/core/domain/src/value-objects/country-iso.vo';
+import { clearSingletonInstances } from '../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 describe('CountryProcessingFactory', () => {
   beforeEach(() => {
     CountryProcessingFactory.reset();
+    clearSingletonInstances(); // Clear singleton instances between tests
   });
 
   describe('getMySQLAppointmentRepository', () => {
@@ -92,8 +94,9 @@ describe('CountryProcessingFactory', () => {
       const instance2 = CountryProcessingFactory.getScheduleRepository();
       const instance3 = CountryProcessingFactory.getEventBridgeAdapter();
 
-      // Reset
+      // Reset both factory and singleton instances
       CountryProcessingFactory.reset();
+      clearSingletonInstances(); // Clear singleton decorator instances
 
       // Create instances again - should create new ones
       const newInstance1 = CountryProcessingFactory.getMySQLAppointmentRepository();

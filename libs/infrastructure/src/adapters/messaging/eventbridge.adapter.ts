@@ -13,10 +13,15 @@ import {
 import { AWS_CONFIG } from '../../config/aws.config';
 import { EventBridgeError } from '../../errors/aws.errors';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 /**
  * EventBridge Adapter for event publishing
  * Implements the Adapter pattern to integrate with AWS EventBridge
+ * Uses @Singleton decorator to ensure efficient EventBridge client management
  */
+@Singleton
 export class EventBridgeAdapter implements IEventBus {
   private readonly eventBridgeClient: EventBridgeClient;
   private readonly logger: Logger;

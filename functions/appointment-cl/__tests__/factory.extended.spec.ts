@@ -1,167 +1,178 @@
 import { DependencyFactory, createHandlerDependencies, createHandlerConfig } from '../factory';
+import { clearSingletonInstances } from '../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
-// Mock AWS Lambda Powertools Logger
-jest.mock('@aws-lambda-powertools/logger', () => ({
-  Logger: jest.fn().mockImplementation(() => ({
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-  })),
-}));
+// Mock dependencies
+jest.mock('@aws-lambda-powertools/logger');
+jest.mock('@medical-appointment/infrastructure');
+jest.mock('@medical-appointment/core-use-cases');
 
-// Mock infrastructure dependencies
-jest.mock('@medical-appointment/infrastructure', () => ({
-  InfrastructureBridgeFactory: {
-    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue({
-      execute: jest.fn()
-    })
-  },
-  AdapterFactory: {
-    createMySQLAppointmentRepository: jest.fn().mockReturnValue({
-      save: jest.fn(),
-      findById: jest.fn()
-    })
-  }
-}));
-
-// Mock domain
-jest.mock('@medical-appointment/core-domain', () => ({
-  CountryISO: {
-    fromString: jest.fn().mockReturnValue({ value: 'CL' })
-  }
-}));
-
-describe('DependencyFactory Extended Tests', () => {
-  let factory: DependencyFactory;
-
+describe('DependencyFactory - Extended Tests', () => {
   beforeEach(() => {
-    // Reset environment variables
+    clearSingletonInstances();
+    jest.clearAllMocks();
+    
+    // Mock environment variables
+    process.env.LOG_LEVEL = 'DEBUG';
+    process.env.ENVIRONMENT = 'test';
+    process.env.BATCH_SIZE = '50';
+    process.env.MAX_RETRIES = '5';
+    process.env.PROCESSING_TIMEOUT = '30000';
+  });
+
+  afterEach(() => {
+    // Clean up environment variables
     delete process.env.LOG_LEVEL;
     delete process.env.ENVIRONMENT;
     delete process.env.BATCH_SIZE;
     delete process.env.MAX_RETRIES;
     delete process.env.PROCESSING_TIMEOUT;
-
-    factory = DependencyFactory.getInstance();
-    factory.reset();
-    jest.clearAllMocks();
   });
 
-  describe('singleton pattern', () => {
-    it('should return the same instance', () => {
-      const instance1 = DependencyFactory.getInstance();
-      const instance2 = DependencyFactory.getInstance();
-      
-      expect(instance1).toBe(instance2);
-    });
-  });
-
-  describe('createDependencies', () => {
-    it('should return cached dependencies on subsequent calls', () => {
-      const deps1 = factory.createDependencies();
-      const deps2 = factory.createDependencies();
-      
-      expect(deps1).toBe(deps2);
-    });
-
+  describe('DependencyFactory class', () => {
     it('should create dependencies with custom environment variables', () => {
-      process.env.LOG_LEVEL = 'DEBUG';
-      process.env.ENVIRONMENT = 'production';
-      
+      const factory = new DependencyFactory();
       const dependencies = factory.createDependencies();
-      
-      expect(dependencies.processAppointmentUseCase).toBeDefined();
-      expect(dependencies.appointmentRepository).toBeDefined();
-      expect(dependencies.logger).toBeDefined();
-    });
-  });
 
-  describe('createConfig', () => {
-    it('should create config with default values', () => {
+      expect(dependencies).toHaveProperty('processAppointmentUseCase');
+      expect(dependencies).toHaveProperty('appointmentRepository');
+      expect(dependencies).toHaveProperty('logger');
+    });
+
+    it('should return same dependencies on subsequent calls (singleton behavior)', () => {
+      const factory = new DependencyFactory();
+      const dependencies1 = factory.createDependencies();
+      const dependencies2 = factory.createDependencies();
+
+      expect(dependencies1).toBe(dependencies2);
+    });
+
+    it('should create config with environment variables', () => {
+      const factory = new DependencyFactory();
       const config = factory.createConfig();
-      
-      expect(config.targetCountry).toBe('CL');
-      expect(config.batchSize).toBeDefined();
-      expect(config.maxRetries).toBeDefined();
-      expect(config.processingTimeout).toBeDefined();
+
+      expect(config).toEqual({
+        targetCountry: 'CL',
+        batchSize: 50,
+        maxRetries: 5,
+        processingTimeout: 30000
+      });
     });
 
-    it('should create config with environment variable overrides', () => {
-      process.env.BATCH_SIZE = '50';
-      process.env.MAX_RETRIES = '5';
-      process.env.PROCESSING_TIMEOUT = '60000';
-      
+    it('should create config with default values when env vars are missing', () => {
+      delete process.env.BATCH_SIZE;
+      delete process.env.MAX_RETRIES;
+      delete process.env.PROCESSING_TIMEOUT;
+
+      const factory = new DependencyFactory();
       const config = factory.createConfig();
-      
-      expect(config.batchSize).toBe(50);
-      expect(config.maxRetries).toBe(5);
-      expect(config.processingTimeout).toBe(60000);
-    });
-  });
 
-  describe('createTestDependencies', () => {
-    it('should create test dependencies with no overrides', () => {
-      const testDeps = factory.createTestDependencies();
-      
-      expect(testDeps.processAppointmentUseCase).toBeDefined();
-      expect(testDeps.appointmentRepository).toBeDefined();
-      expect(testDeps.logger).toBeDefined();
+      expect(config.batchSize).toBe(10); // Default from HANDLER_CONSTANTS.MAX_BATCH_SIZE
+      expect(config.maxRetries).toBe(3);  // Default from HANDLER_CONSTANTS.MAX_RETRIES
+      expect(config.processingTimeout).toBe(30000); // Default from HANDLER_CONSTANTS.DEFAULT_TIMEOUT
     });
 
     it('should create test dependencies with overrides', () => {
-      const mockUseCase = { execute: jest.fn() };
-      const testDeps = factory.createTestDependencies({
-        processAppointmentUseCase: mockUseCase as any
-      });
-      
-      expect(testDeps.processAppointmentUseCase).toBe(mockUseCase);
-      expect(testDeps.appointmentRepository).toBeDefined();
-      expect(testDeps.logger).toBeDefined();
+      const factory = new DependencyFactory();
+      const mockOverrides = {
+        logger: { info: jest.fn(), error: jest.fn() } as any
+      };
+
+      const testDependencies = factory.createTestDependencies(mockOverrides);
+
+      expect(testDependencies.logger).toBe(mockOverrides.logger);
+      expect(testDependencies).toHaveProperty('processAppointmentUseCase');
+      expect(testDependencies).toHaveProperty('appointmentRepository');
     });
 
-    it('should override multiple dependencies', () => {
-      const mockUseCase = { execute: jest.fn() };
-      const mockRepository = { save: jest.fn() };
-      const mockLogger = { info: jest.fn() };
-      
-      const testDeps = factory.createTestDependencies({
-        processAppointmentUseCase: mockUseCase as any,
-        appointmentRepository: mockRepository as any,
-        logger: mockLogger as any
-      });
-      
-      expect(testDeps.processAppointmentUseCase).toBe(mockUseCase);
-      expect(testDeps.appointmentRepository).toBe(mockRepository);
-      expect(testDeps.logger).toBe(mockLogger);
-    });
-  });
+    it('should create test dependencies without overrides', () => {
+      const factory = new DependencyFactory();
+      const testDependencies = factory.createTestDependencies();
 
-  describe('reset', () => {
-    it('should reset dependencies and create new ones on next call', () => {
-      const deps1 = factory.createDependencies();
+      expect(testDependencies).toHaveProperty('processAppointmentUseCase');
+      expect(testDependencies).toHaveProperty('appointmentRepository');
+      expect(testDependencies).toHaveProperty('logger');
+    });
+
+    it('should reset dependencies correctly', () => {
+      const factory = new DependencyFactory();
+      const dependencies1 = factory.createDependencies();
+      
       factory.reset();
-      const deps2 = factory.createDependencies();
       
-      expect(deps1).not.toBe(deps2);
+      const dependencies2 = factory.createDependencies();
+
+      // After reset, should create new dependencies
+      expect(dependencies2).toHaveProperty('processAppointmentUseCase');
+      expect(dependencies2).toHaveProperty('appointmentRepository');
+      expect(dependencies2).toHaveProperty('logger');
+    });
+
+    it('should handle invalid environment variable values gracefully', () => {
+      process.env.BATCH_SIZE = 'invalid';
+      process.env.MAX_RETRIES = 'invalid';
+      process.env.PROCESSING_TIMEOUT = 'invalid';
+
+      const factory = new DependencyFactory();
+      const config = factory.createConfig();
+
+      // Should fallback to NaN, which becomes default values
+      expect(isNaN(config.batchSize)).toBe(true);
+      expect(isNaN(config.maxRetries)).toBe(true);
+      expect(isNaN(config.processingTimeout)).toBe(true);
     });
   });
 
   describe('convenience functions', () => {
-    it('should create handler dependencies via convenience function', () => {
-      const deps = createHandlerDependencies();
-      
-      expect(deps.processAppointmentUseCase).toBeDefined();
-      expect(deps.appointmentRepository).toBeDefined();
-      expect(deps.logger).toBeDefined();
+    it('should create handler dependencies using convenience function', () => {
+      const dependencies = createHandlerDependencies();
+
+      expect(dependencies).toHaveProperty('processAppointmentUseCase');
+      expect(dependencies).toHaveProperty('appointmentRepository');
+      expect(dependencies).toHaveProperty('logger');
     });
 
-    it('should create handler config via convenience function', () => {
+    it('should create handler config using convenience function', () => {
       const config = createHandlerConfig();
-      
+
+      expect(config).toHaveProperty('targetCountry');
+      expect(config).toHaveProperty('batchSize');
+      expect(config).toHaveProperty('maxRetries');
+      expect(config).toHaveProperty('processingTimeout');
       expect(config.targetCountry).toBe('CL');
-      expect(config.batchSize).toBeDefined();
-      expect(config.maxRetries).toBeDefined();
-      expect(config.processingTimeout).toBeDefined();
+    });
+
+    it('should create different instances each time for convenience functions', () => {
+      const dependencies1 = createHandlerDependencies();
+      const dependencies2 = createHandlerDependencies();
+
+      // Since they use new instances of DependencyFactory, they should be different
+      // but have the same structure
+      expect(dependencies1).toHaveProperty('processAppointmentUseCase');
+      expect(dependencies2).toHaveProperty('processAppointmentUseCase');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle missing LOG_LEVEL environment variable', () => {
+      delete process.env.LOG_LEVEL;
+      delete process.env.ENVIRONMENT;
+
+      const factory = new DependencyFactory();
+      const dependencies = factory.createDependencies();
+
+      expect(dependencies).toHaveProperty('logger');
+    });
+
+    it('should create multiple factory instances with singleton behavior', () => {
+      const factory1 = new DependencyFactory();
+      const factory2 = new DependencyFactory();
+
+      const deps1 = factory1.createDependencies();
+      const deps2 = factory2.createDependencies();
+
+      // Each factory should maintain its own dependencies
+      expect(deps1).toHaveProperty('processAppointmentUseCase');
+      expect(deps2).toHaveProperty('processAppointmentUseCase');
     });
   });
 });

@@ -7,27 +7,19 @@ import { Logger } from '@aws-lambda-powertools/logger';
 import { ProcessCountryAppointmentUseCase } from '@medical-appointment/core-use-cases';
 import { InfrastructureBridgeFactory, AdapterFactory } from '@medical-appointment/infrastructure';
 import { CountryISO } from '@medical-appointment/core-domain';
+import { Singleton } from '@medical-appointment/shared';
 import { HandlerDependencies, HandlerConfig, HANDLER_CONSTANTS } from './definitions';
 
 /**
  * Factory class for creating handler dependencies
  * Implements dependency injection pattern
+ * Uses @Singleton decorator for efficient dependency management
  */
+@Singleton
 export class DependencyFactory {
-  private static instance: DependencyFactory;
   private dependencies: HandlerDependencies | null = null;
 
-  private constructor() {}
-
-  /**
-   * Singleton pattern for dependency factory
-   */
-  public static getInstance(): DependencyFactory {
-    if (!DependencyFactory.instance) {
-      DependencyFactory.instance = new DependencyFactory();
-    }
-    return DependencyFactory.instance;
-  }
+  constructor() {}
 
   /**
    * Create all dependencies for the handler
@@ -98,12 +90,12 @@ export class DependencyFactory {
  * Convenience function to get configured dependencies
  */
 export const createHandlerDependencies = (): HandlerDependencies => {
-  return DependencyFactory.getInstance().createDependencies();
+  return new DependencyFactory().createDependencies();
 };
 
 /**
  * Convenience function to get handler configuration
  */
 export const createHandlerConfig = (): HandlerConfig => {
-  return DependencyFactory.getInstance().createConfig();
+  return new DependencyFactory().createConfig();
 };

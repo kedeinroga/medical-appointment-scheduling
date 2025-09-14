@@ -14,11 +14,16 @@ import {
   IEventBus 
 } from '@medical-appointment/core-domain';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 /**
  * Factory for creating use case instances with proper dependency injection
  * This factory belongs to the application layer and receives infrastructure dependencies
  * Implements the Factory pattern to centralize object creation following Clean Architecture
+ * Uses @Singleton decorator for efficient factory management
  */
+@Singleton
 export class UseCaseFactory {
   
   /**

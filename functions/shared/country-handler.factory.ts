@@ -12,6 +12,9 @@ import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure
 // Domain layer
 import { CountryISO } from '@medical-appointment/core-domain';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 // Shared handler
 import { 
   CountryAppointmentHandler, 
@@ -22,7 +25,9 @@ import {
 /**
  * Factory for creating country-specific handlers
  * This is part of the Functions/Presentation layer
+ * Uses @Singleton decorator for efficient handler creation
  */
+@Singleton
 export class CountryHandlerFactory {
   
   /**

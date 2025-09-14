@@ -2,6 +2,7 @@ import { EventBridgeAdapter } from '../eventbridge.adapter';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { EventBridgeError } from '../../../errors/aws.errors';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 jest.mock('@aws-sdk/client-eventbridge');
 jest.mock('@aws-lambda-powertools/logger');
@@ -21,6 +22,7 @@ describe('EventBridgeAdapter - Comprehensive Coverage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSingletonInstances(); // Clear singleton instances between tests
     
     mockEventBridgeClient = {
       send: jest.fn()

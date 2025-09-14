@@ -9,10 +9,15 @@ import { CountryISO, IMessagingPort } from '@medical-appointment/core-domain';
 import { AWS_CONFIG, getSNSTopicArnByCountry } from '../../config/aws.config';
 import { SNSError } from '../../errors/aws.errors';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 /**
  * SNS Adapter for messaging operations
  * Implements the Adapter pattern to integrate with AWS SNS
+ * Uses @Singleton decorator to ensure efficient SNS client management
  */
+@Singleton
 export class SNSAdapter implements IMessagingPort {
   private readonly snsClient: SNSClient;
   private readonly logger: Logger;

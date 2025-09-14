@@ -6,6 +6,10 @@ import { AppointmentProcessedEvent } from '../events/appointment-processed.event
 import { AppointmentCompletedEvent } from '../events/appointment-completed.event';
 import { DomainEvent } from '../events/domain.event';
 
+/**
+ * Domain service for appointment-related business logic
+ * Implements stateless business logic that doesn't belong to any specific entity
+ */
 export class AppointmentDomainService {
   public createAppointment(
     insured: Insured,

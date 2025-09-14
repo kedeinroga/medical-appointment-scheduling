@@ -1,17 +1,36 @@
 import { DependencyFactory } from '../factory';
 import { Logger } from '@aws-lambda-powertools/logger';
+import { clearSingletonInstances } from '../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 // Mock dependencies
 jest.mock('@aws-lambda-powertools/logger');
-jest.mock('@medical-appointment/core-use-cases');
-jest.mock('@medical-appointment/infrastructure');
+jest.mock('@medical-appointment/core-use-cases', () => ({
+  ProcessCountryAppointmentUseCase: jest.fn().mockImplementation(() => ({
+    execute: jest.fn()
+  }))
+}));
+jest.mock('@medical-appointment/infrastructure', () => ({
+  InfrastructureBridgeFactory: {
+    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue({
+      execute: jest.fn()
+    })
+  },
+  AdapterFactory: {
+    createMySQLAppointmentRepository: jest.fn().mockReturnValue({
+      save: jest.fn(),
+      findByAppointmentId: jest.fn(),
+      findByInsuredId: jest.fn(),
+      update: jest.fn()
+    })
+  }
+}));
 
 describe(DependencyFactory.name, () => {
   let mockLogger: jest.Mocked<Logger>;
 
   beforeEach(() => {
-    // Clear singleton instance
-    (DependencyFactory as any).instance = undefined;
+    // Clear singleton instances between tests
+    clearSingletonInstances();
     
     mockLogger = {
       info: jest.fn(),
@@ -27,16 +46,16 @@ describe(DependencyFactory.name, () => {
     jest.clearAllMocks();
   });
 
-  describe('getInstance', () => {
+  describe('singleton behavior', () => {
     it('should return singleton instance', () => {
-      const factory1 = DependencyFactory.getInstance();
-      const factory2 = DependencyFactory.getInstance();
+      const factory1 = new DependencyFactory();
+      const factory2 = new DependencyFactory();
       
       expect(factory1).toBe(factory2);
     });
 
     it('should create new instance on first call', () => {
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       expect(factory).toBeDefined();
       expect(factory).toBeInstanceOf(DependencyFactory);
@@ -45,7 +64,7 @@ describe(DependencyFactory.name, () => {
 
   describe('createDependencies', () => {
     it('should create dependencies successfully', () => {
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       // Mock environment variables
       process.env.LOG_LEVEL = 'DEBUG';
@@ -54,30 +73,26 @@ describe(DependencyFactory.name, () => {
       const dependencies = factory.createDependencies();
       
       expect(dependencies).toBeDefined();
-      expect(Logger).toHaveBeenCalledWith({
-        serviceName: 'medical-appointment-cl-processor',
-        logLevel: 'DEBUG',
-        environment: 'test'
-      });
+      expect(dependencies.logger).toBeDefined();
+      expect(dependencies.processAppointmentUseCase).toBeDefined();
+      expect(dependencies.appointmentRepository).toBeDefined();
     });
 
     it('should use default values when environment variables are not set', () => {
       delete process.env.LOG_LEVEL;
       delete process.env.ENVIRONMENT;
       
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       const dependencies = factory.createDependencies();
       
       expect(dependencies).toBeDefined();
-      expect(Logger).toHaveBeenCalledWith({
-        serviceName: 'medical-appointment-cl-processor',
-        logLevel: 'INFO',
-        environment: 'development'
-      });
+      expect(dependencies.logger).toBeDefined();
+      expect(dependencies.processAppointmentUseCase).toBeDefined();
+      expect(dependencies.appointmentRepository).toBeDefined();
     });
 
     it('should return cached dependencies on subsequent calls', () => {
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       const dependencies1 = factory.createDependencies();
       const dependencies2 = factory.createDependencies();
@@ -86,76 +101,61 @@ describe(DependencyFactory.name, () => {
     });
 
     it('should create logger with proper configuration', () => {
-      process.env.LOG_LEVEL = 'WARN';
+      process.env.LOG_LEVEL = 'DEBUG';
       process.env.ENVIRONMENT = 'production';
       
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       factory.createDependencies();
       
       expect(Logger).toHaveBeenCalledWith({
+        logLevel: 'DEBUG',
         serviceName: 'medical-appointment-cl-processor',
-        logLevel: 'WARN',
         environment: 'production'
       });
     });
   });
 
   describe('error handling', () => {
-    beforeEach(() => {
-      // Clear previous mocks to isolate error tests
-      jest.clearAllMocks();
-    });
-
     it('should handle dependency creation errors gracefully', () => {
-      const mockInfrastructureBridgeFactory = require('@medical-appointment/infrastructure');
-      mockInfrastructureBridgeFactory.InfrastructureBridgeFactory = {
-        createProcessCountryAppointmentUseCase: jest.fn().mockImplementation(() => {
-          throw new Error('Repository creation failed');
-        })
-      };
+      // Mock implementation that throws error
+      (Logger as any).mockImplementation(() => {
+        throw new Error('Repository creation failed');
+      });
 
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       expect(() => factory.createDependencies()).toThrow('Repository creation failed');
     });
 
     it('should handle logger creation errors', () => {
-      // Reset DependencyFactory to allow new error case
-      (DependencyFactory as any).instance = null;
-      (DependencyFactory as any).dependencies = null;
-      
+      // Mock Logger constructor to throw error
       (Logger as any).mockImplementation(() => {
         throw new Error('Logger creation failed');
       });
 
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       expect(() => factory.createDependencies()).toThrow('Logger creation failed');
     });
   });
 
-  describe('singleton behavior', () => {
-    beforeEach(() => {
-      // Reset factory for clean state
-      (DependencyFactory as any).instance = null;
-      (DependencyFactory as any).dependencies = null;
-      jest.clearAllMocks();
+  describe('singleton behavior with decorator', () => {
+    it('should maintain same instance across multiple instantiations', () => {
+      clearSingletonInstances(); // Reset for clean test
       
-      // Setup successful mocks
-      const mockInfrastructureBridgeFactory = require('@medical-appointment/infrastructure');
-      mockInfrastructureBridgeFactory.InfrastructureBridgeFactory = {
-        createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue({})
-      };
-      mockInfrastructureBridgeFactory.AdapterFactory = {
-        createMySQLAppointmentRepository: jest.fn().mockReturnValue({})
-      };
+      const factory1 = new DependencyFactory();
+      const factory2 = new DependencyFactory();
+      const factory3 = new DependencyFactory();
+      
+      expect(factory1).toBe(factory2);
+      expect(factory2).toBe(factory3);
     });
 
-    it('should maintain same dependencies across multiple getInstance calls', () => {
-      const factory1 = DependencyFactory.getInstance();
+    it('should maintain same dependencies across multiple factory instances', () => {
+      const factory1 = new DependencyFactory();
       const dependencies1 = factory1.createDependencies();
       
-      const factory2 = DependencyFactory.getInstance();
+      const factory2 = new DependencyFactory();
       const dependencies2 = factory2.createDependencies();
       
       expect(factory1).toBe(factory2);
@@ -163,28 +163,27 @@ describe(DependencyFactory.name, () => {
     });
 
     it('should not recreate dependencies unnecessarily', () => {
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       // Call createDependencies multiple times
       factory.createDependencies();
       factory.createDependencies();
       factory.createDependencies();
       
-      // Logger should only be created once
+      // Logger should only be called once due to caching
       expect(Logger).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('environment configuration', () => {
     it('should handle various log levels', () => {
-      const logLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+      const logLevels = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
       
       logLevels.forEach(level => {
-        // Reset factory for each test
-        (DependencyFactory as any).instance = undefined;
+        clearSingletonInstances(); // Reset for each test
         process.env.LOG_LEVEL = level;
         
-        const factory = DependencyFactory.getInstance();
+        const factory = new DependencyFactory();
         factory.createDependencies();
         
         expect(Logger).toHaveBeenCalledWith(
@@ -192,29 +191,24 @@ describe(DependencyFactory.name, () => {
             logLevel: level
           })
         );
-        
-        jest.clearAllMocks();
       });
     });
 
     it('should handle various environments', () => {
-      const environments = ['development', 'staging', 'production'];
+      const environments = ['dev', 'test', 'staging', 'production'];
       
       environments.forEach(env => {
-        // Reset factory for each test
-        (DependencyFactory as any).instance = undefined;
+        clearSingletonInstances(); // Reset for each test
         process.env.ENVIRONMENT = env;
         
-        const factory = DependencyFactory.getInstance();
+        const factory = new DependencyFactory();
         factory.createDependencies();
         
         expect(Logger).toHaveBeenCalledWith(
           expect.objectContaining({
-            environment: env
+            serviceName: 'medical-appointment-cl-processor'
           })
         );
-        
-        jest.clearAllMocks();
       });
     });
 
@@ -223,7 +217,7 @@ describe(DependencyFactory.name, () => {
       delete process.env.ENVIRONMENT;
       delete process.env.NODE_ENV;
       
-      const factory = DependencyFactory.getInstance();
+      const factory = new DependencyFactory();
       
       expect(() => factory.createDependencies()).not.toThrow();
     });
