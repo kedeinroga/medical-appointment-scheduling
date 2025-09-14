@@ -10,11 +10,30 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
 }));
 
 // Mock the infrastructure bridge factory
-// Mock dependencies
+const mockProcessAppointmentUseCase = {
+  execute: jest.fn().mockResolvedValue({
+    appointmentId: 'test-id',
+    status: 'processed'
+  })
+};
+
 jest.mock('@medical-appointment/infrastructure', () => ({
-  ...jest.requireActual('@medical-appointment/infrastructure'),
   InfrastructureBridgeFactory: {
-    createProcessCountryAppointmentUseCase: jest.fn()
+    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue(mockProcessAppointmentUseCase)
+  }
+}));
+
+// Mock shared utilities
+jest.mock('@medical-appointment/shared', () => ({
+  logBusinessError: jest.fn(),
+  logInfrastructureError: jest.fn(),
+  maskInsuredId: jest.fn((id) => `${id.substring(0, 2)}***`)
+}));
+
+// Mock domain
+jest.mock('@medical-appointment/core-domain', () => ({
+  CountryISO: {
+    fromString: jest.fn().mockReturnValue({ value: 'CL' })
   }
 }));
 
@@ -77,9 +96,13 @@ describe('Appointment CL Lambda Handler', () => {
 
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
-      // Verify that the factory method was called (indicating the handler processed the message)
-      const { InfrastructureBridgeFactory } = require('@medical-appointment/infrastructure');
-      expect(InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase).toHaveBeenCalled();
+      // Verify that the use case was called (indicating the handler processed the message)
+      expect(mockProcessAppointmentUseCase.execute).toHaveBeenCalledWith({
+        appointmentId: 'test-id',
+        insuredId: '12345',
+        scheduleId: 100,
+        countryISO: 'CL'
+      });
     });
 
     it('should skip message for wrong country', async () => {
@@ -94,9 +117,8 @@ describe('Appointment CL Lambda Handler', () => {
 
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
-      // Should not call the use case factory for wrong country
-      const { InfrastructureBridgeFactory } = require('@medical-appointment/infrastructure');
-      expect(InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase).not.toHaveBeenCalled();
+      // Should not call the use case for wrong country
+      expect(mockProcessAppointmentUseCase.execute).not.toHaveBeenCalled();
     });
 
     it('should handle validation errors gracefully', async () => {

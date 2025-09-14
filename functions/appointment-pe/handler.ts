@@ -1,249 +1,35 @@
 /**
- * Appointment PE Lambda Handler - Clean Architecture Implementation
- * Processes SQS messages for Peru appointments with proper dependency injection
+ * Appointment PE Lambda Handler - Clean Architecture Compliant
+ * Functions/Presentation Layer - Only contains configuration and wiring
  */
 
 // External dependencies
 import { SQSEvent, SQSHandler, Context } from 'aws-lambda';
 
-// Shared utilities
-import { logBusinessError, logInfrastructureError, maskInsuredId } from '@medical-appointment/shared';
+// Shared handler from Functions layer
+import { CountryHandlerFactory } from '../shared/country-handler.factory';
+import { CountryHandlerConfig } from '../shared/country-appointment-handler';
 
-// Application layer imports  
-import { ProcessCountryAppointmentDto } from '@medical-appointment/core-use-cases';
-import { ValidationError } from '@medical-appointment/shared';
-
-// Infrastructure layer
-import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure';
-import { CountryISO } from '@medical-appointment/core-domain';
-
-// Handler layer imports
-import { COUNTRY_PROCESSING, LOG_EVENTS } from './constants';
+// Handler layer imports (same layer)
+import { LOG_EVENTS } from './constants';
 
 /**
- * Handler Dependencies
+ * Configuration for Peru appointments
+ * This is pure configuration - no business logic
  */
-interface Dependencies {
-  processAppointmentUseCase: any;
-  logger: any;
-}
-
-/**
- * Dependency Factory with lazy loading
- */
-class DependencyFactory {
-  private static dependencies: Dependencies | null = null;
-
-  static create(): Dependencies {
-    if (this.dependencies) {
-      return this.dependencies;
-    }
-
-    const { Logger } = require('@aws-lambda-powertools/logger');
-    
-    const logger = new Logger({
-      serviceName: 'medical-appointment-pe-processor',
-      logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
-    });
-
-    // Lazy loading of use case to allow for mocking in tests
-    let processAppointmentUseCase: any = null;
-    
-    const getProcessAppointmentUseCase = () => {
-      if (!processAppointmentUseCase) {
-        const countryISO = CountryISO.fromString('PE');
-        processAppointmentUseCase = InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase(countryISO);
-      }
-      return processAppointmentUseCase;
-    };
-
-    this.dependencies = {
-      processAppointmentUseCase: {
-        execute: (...args: any[]) => getProcessAppointmentUseCase().execute(...args)
-      },
-      logger
-    };
-
-    return this.dependencies;
-  }
-
-  static reset() {
-    this.dependencies = null;
-  }
-}
-
-/**
- * Message Processing Service
- */
-class MessageProcessor {
-  constructor(private deps: Dependencies) {}
-
-  async processRecord(record: any, requestId: string) {
-    const messageId = record.messageId;
-
-    try {
-      // Parse message - handle both SNS wrapped and raw formats
-      const messageBody = JSON.parse(record.body);
-      
-      let appointmentData;
-      if (messageBody.Message) {
-        // SNS wrapped format
-        appointmentData = JSON.parse(messageBody.Message);
-      } else {
-        // Raw message format
-        appointmentData = messageBody;
-      }
-
-      // Validate country
-      if (appointmentData.countryISO !== 'PE') {
-        this.deps.logger.info('Skipping message - wrong country', {
-          messageId,
-          country: appointmentData.countryISO,
-          expected: 'PE'
-        });
-        return { messageId, skipped: true, reason: 'wrong_country' };
-      }
-
-      // Create DTO
-      const processDto: ProcessCountryAppointmentDto = {
-        appointmentId: appointmentData.appointmentId,
-        insuredId: appointmentData.insuredId,
-        countryISO: appointmentData.countryISO,
-        scheduleId: appointmentData.scheduleId
-      };
-
-      // Execute use case
-      await this.deps.processAppointmentUseCase.execute(processDto);
-
-      this.deps.logger.info('Appointment processed successfully', {
-        logId: LOG_EVENTS.PE_APPOINTMENT_PROCESSED.logId,
-        messageId,
-        appointmentId: appointmentData.appointmentId,
-        insuredId: maskInsuredId(appointmentData.insuredId),
-        country: 'PE'
-      });
-
-      return { messageId, success: true };
-
-    } catch (error) {
-      const err = error as Error;
-      
-      if (error instanceof ValidationError) {
-        logBusinessError(this.deps.logger, err, { messageId, requestId });
-        return { 
-          messageId, 
-          success: false, 
-          error: { type: 'validation', message: err.message }
-        };
-      }
-
-      logInfrastructureError(this.deps.logger, err, { messageId, requestId });
-      return { 
-        messageId, 
-        success: false, 
-        error: { type: 'infrastructure', message: err.message }
-      };
-    }
-  }
-}
-
-/**
- * Batch Processing Service
- */
-class BatchProcessor {
-  constructor(
-    private deps: Dependencies,
-    private messageProcessor: MessageProcessor
-  ) {}
-
-  async processBatch(event: SQSEvent, requestId: string) {
-    const startTime = Date.now();
-    const totalRecords = event.Records.length;
-
-    this.deps.logger.info('Starting batch processing', {
-      logId: LOG_EVENTS.PE_APPOINTMENT_PROCESSING_STARTED.logId,
-      requestId,
-      totalRecords,
-      targetCountry: 'PE'
-    });
-
-    const results = [];
-    let processed = 0;
-    let failed = 0;
-    let skipped = 0;
-
-    for (const record of event.Records) {
-      const result = await this.messageProcessor.processRecord(record, requestId);
-      results.push(result);
-
-      if (result.success) processed++;
-      else if (result.skipped) skipped++;
-      else failed++;
-    }
-
-    const executionTime = Date.now() - startTime;
-
-    this.deps.logger.info('Batch processing completed', {
-      logId: LOG_EVENTS.PE_APPOINTMENT_PROCESSED.logId,
-      requestId,
-      totalRecords,
-      processed,
-      failed,
-      skipped,
-      executionTime
-    });
-
-    return {
-      totalRecords,
-      processed,
-      failed,
-      skipped,
-      executionTime,
-      results
-    };
-  }
-}
-
-/**
- * Main Lambda Handler
- */
-export const main: SQSHandler = async (event: SQSEvent, context: Context): Promise<void> => {
-  const requestId = context.awsRequestId;
-
-  try {
-    // Step 0: Log that lambda was invoked
-    console.log('PE Lambda invoked', {
-      requestId,
-      recordCount: event.Records.length,
-      timestamp: new Date().toISOString()
-    });
-
-    // Step 1: Create dependencies (Infrastructure -> Use Cases)
-    const dependencies = DependencyFactory.create();
-
-    // Step 2: Create services with dependency injection
-    const messageProcessor = new MessageProcessor(dependencies);
-    const batchProcessor = new BatchProcessor(dependencies, messageProcessor);
-
-    // Step 3: Process batch
-    const summary = await batchProcessor.processBatch(event, requestId);
-
-    // Step 4: Handle partial failures
-    if (summary.failed > 0) {
-      dependencies.logger.warn('Some records failed processing', {
-        requestId,
-        failedCount: summary.failed,
-        totalRecords: summary.totalRecords
-      });
-    }
-
-  } catch (error) {
-    const dependencies = DependencyFactory.create();
-    logInfrastructureError(dependencies.logger, error as Error, { 
-      requestId, 
-      operation: 'batch-processing' 
-    });
-    
-    throw error;
+const PERU_HANDLER_CONFIG: CountryHandlerConfig = {
+  countryCode: 'PE',
+  serviceName: 'medical-appointment-pe-processor',
+  logEvents: {
+    PROCESSING_STARTED: LOG_EVENTS.PE_APPOINTMENT_PROCESSING_STARTED,
+    PROCESSED: LOG_EVENTS.PE_APPOINTMENT_PROCESSED
   }
 };
+
+/**
+ * Main Lambda Handler - Clean Architecture compliant
+ * - No business logic here
+ * - Only configuration and dependency injection through factory
+ * - Factory handles the infrastructure bridge properly
+ */
+export const main: SQSHandler = CountryHandlerFactory.createLambdaHandler(PERU_HANDLER_CONFIG);

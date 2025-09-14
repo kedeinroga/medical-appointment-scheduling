@@ -83,12 +83,9 @@ describe('Appointment Lambda Handler', () => {
 
       expect(result.statusCode).toBe(201);
       expect(JSON.parse(result.body)).toEqual({
-        data: {
-          appointmentId: 'test-id',
-          status: 'pending',
-          message: 'Appointment scheduling is in process'
-        },
-        timestamp: expect.any(String)
+        appointmentId: 'test-id',
+        message: 'Appointment scheduling is in process',
+        status: 'pending'
       });
     });
 
@@ -102,7 +99,7 @@ describe('Appointment Lambda Handler', () => {
       const result = await main(event as APIGatewayProxyEvent, mockContext, () => {}) as APIGatewayProxyResult;
 
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body).error.code).toBe('MISSING_BODY');
+      expect(JSON.parse(result.body).error.errorCode).toBe('MISSING_BODY');
     });
 
     it('should return 400 for invalid country', async () => {
@@ -119,7 +116,7 @@ describe('Appointment Lambda Handler', () => {
       const result = await main(event as APIGatewayProxyEvent, mockContext, () => {}) as APIGatewayProxyResult;
 
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body).error.code).toBe('INVALID_COUNTRY_ISO');
+      expect(JSON.parse(result.body).error.errorCode).toBe('INVALID_COUNTRY_ISO');
     });
   });
 
@@ -137,13 +134,10 @@ describe('Appointment Lambda Handler', () => {
 
       expect(result.statusCode).toBe(200);
       expect(JSON.parse(result.body)).toEqual({
-        data: {
-          appointments: expect.any(Array),
-          pagination: {
-            count: 1
-          }
-        },
-        timestamp: expect.any(String)
+        appointments: expect.any(Array),
+        pagination: {
+          count: 1
+        }
       });
     });
 
@@ -157,7 +151,7 @@ describe('Appointment Lambda Handler', () => {
       const result = await main(event as APIGatewayProxyEvent, mockContext, () => {}) as APIGatewayProxyResult;
 
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body).error.code).toBe('MISSING_INSURED_ID');
+      expect(JSON.parse(result.body).error.errorCode).toBe('MISSING_INSURED_ID');
     });
   });
 
@@ -173,7 +167,7 @@ describe('Appointment Lambda Handler', () => {
       expect(result.statusCode).toBe(200);
       expect(result.headers).toEqual(expect.objectContaining({
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
       }));
     });
   });
@@ -188,7 +182,7 @@ describe('Appointment Lambda Handler', () => {
       const result = await main(event as APIGatewayProxyEvent, mockContext, () => {}) as APIGatewayProxyResult;
 
       expect(result.statusCode).toBe(404);
-      expect(JSON.parse(result.body).error.code).toBe('ROUTE_NOT_FOUND');
+      expect(JSON.parse(result.body).error.errorCode).toBe('ROUTE_NOT_FOUND');
     });
   });
 

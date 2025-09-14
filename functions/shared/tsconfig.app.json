@@ -1,7 +1,7 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.json", 
   "compilerOptions": {
-    "outDir": "../../dist/functions/appointment",
+    "outDir": "../../dist/functions/shared",
     "module": "commonjs",
     "types": ["node"],
     "target": "ES2022",
@@ -10,9 +10,10 @@
   },
   "references": [
     { "path": "../../libs/core/use-cases" },
+    { "path": "../../libs/core/domain" },
     { "path": "../../libs/infrastructure" },
     { "path": "../../libs/shared" }
   ],
   "exclude": ["jest.config.js", "**/*.spec.ts", "**/*.test.ts", "__tests__/**/*"],
-  "include": ["*.ts", "src/**/*.ts", "../shared/**/*.ts"]
+  "include": ["api-handler-base.ts", "types.ts"]
 }

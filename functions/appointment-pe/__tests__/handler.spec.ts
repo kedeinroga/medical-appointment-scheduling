@@ -10,18 +10,30 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
 }));
 
 // Mock the infrastructure bridge factory
+const mockProcessAppointmentUseCase = {
+  execute: jest.fn().mockResolvedValue({
+    appointmentId: 'test-id',
+    status: 'processed'
+  })
+};
+
 jest.mock('@medical-appointment/infrastructure', () => ({
   InfrastructureBridgeFactory: {
-    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue({
-      execute: jest.fn().mockResolvedValue({
-        appointmentId: 'test-id',
-        status: 'processed',
-        message: 'Appointment processed for PE'
-      })
-    })
-  },
-  CountryProcessingFactory: {
-    createProcessAppointmentUseCase: jest.fn()
+    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue(mockProcessAppointmentUseCase)
+  }
+}));
+
+// Mock shared utilities
+jest.mock('@medical-appointment/shared', () => ({
+  logBusinessError: jest.fn(),
+  logInfrastructureError: jest.fn(),
+  maskInsuredId: jest.fn((id) => `${id.substring(0, 2)}***`)
+}));
+
+// Mock domain
+jest.mock('@medical-appointment/core-domain', () => ({
+  CountryISO: {
+    fromString: jest.fn().mockReturnValue({ value: 'PE' })
   }
 }));
 
@@ -84,9 +96,13 @@ describe('Appointment PE Lambda Handler', () => {
 
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
-      // Verify that the factory method was called (indicating the handler processed the message)
-      const { InfrastructureBridgeFactory } = require('@medical-appointment/infrastructure');
-      expect(InfrastructureBridgeFactory.createProcessCountryAppointmentUseCase).toHaveBeenCalled();
+      // Verify that the use case was called (indicating the handler processed the message)
+      expect(mockProcessAppointmentUseCase.execute).toHaveBeenCalledWith({
+        appointmentId: 'test-id',
+        insuredId: '12345',
+        scheduleId: 100,
+        countryISO: 'PE'
+      });
     });
 
     it('should skip message for wrong country', async () => {

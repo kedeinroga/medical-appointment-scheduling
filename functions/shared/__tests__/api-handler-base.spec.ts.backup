@@ -1,0 +1,149 @@
+import { ApiHandlerBase } from '../api-handler-base';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+
+// Mock AWS Lambda Powertools Logger
+jest.mock('@aws-lambda-powertools/logger', () => ({
+  Logger: jest.fn().mockImplementation(() => ({
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  })),
+}));
+
+describe('ApiHandlerBase Utility Methods', () => {
+  let mockLogger: any;
+
+  beforeEach(() => {
+    mockLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+    };
+  });
+
+  describe('validateJsonBody', () => {
+    it('should return error for missing body', () => {
+      const event = {
+        body: null
+      } as APIGatewayProxyEvent;
+
+      const result = ApiHandlerBase.validateJsonBody(event);
+
+      expect(result.isValid).toBe(false);
+      expect(result.error?.statusCode).toBe(400);
+      expect(result.error?.message).toBe('Request body is required');
+      expect(result.error?.errorCode).toBe('MISSING_BODY');
+    });
+
+    it('should return error for invalid JSON', () => {
+      const event = {
+        body: 'invalid-json{'
+      } as APIGatewayProxyEvent;
+
+      const result = ApiHandlerBase.validateJsonBody(event);
+
+      expect(result.isValid).toBe(false);
+      expect(result.error?.statusCode).toBe(400);
+      expect(result.error?.message).toBe('Invalid JSON in request body');
+      expect(result.error?.errorCode).toBe('INVALID_JSON');
+    });
+
+    it('should return valid result for proper JSON', () => {
+      const testData = { test: 'value' };
+      const event = {
+        body: JSON.stringify(testData)
+      } as APIGatewayProxyEvent;
+
+      const result = ApiHandlerBase.validateJsonBody(event);
+
+      expect(result.isValid).toBe(true);
+      expect(result.data).toEqual(testData);
+    });
+  });
+
+  describe('validateRequiredFields', () => {
+    it('should return error for missing required fields', () => {
+      const data = { field1: 'value1' };
+      const requiredFields = ['field1', 'field2', 'field3'];
+
+      const result = ApiHandlerBase.validateRequiredFields(data, requiredFields);
+
+      expect(result.isValid).toBe(false);
+      expect(result.error?.statusCode).toBe(400);
+      expect(result.error?.message).toBe('Missing required fields: field2, field3');
+      expect(result.error?.errorCode).toBe('MISSING_REQUIRED_FIELDS');
+    });
+
+    it('should return valid result when all fields present', () => {
+      const data = { field1: 'value1', field2: 'value2' };
+      const requiredFields = ['field1', 'field2'];
+
+      const result = ApiHandlerBase.validateRequiredFields(data, requiredFields);
+
+      expect(result.isValid).toBe(true);
+      expect(result.data).toEqual(data);
+    });
+
+    it('should handle empty required fields array', () => {
+      const data = { field1: 'value1' };
+      const requiredFields: string[] = [];
+
+      const result = ApiHandlerBase.validateRequiredFields(data, requiredFields);
+
+      expect(result.isValid).toBe(true);
+      expect(result.data).toEqual(data);
+    });
+  });
+
+  describe('instance methods', () => {
+    it('should create instance with valid configuration', () => {
+      const routes = [
+        {
+          method: 'GET',
+          path: '/test',
+          handler: async () => ({ statusCode: 200, body: '', headers: {} })
+        }
+      ];
+      const instance = new ApiHandlerBase(routes, mockLogger);
+
+      expect(instance).toBeDefined();
+    });
+
+    it('should create response with correct structure', () => {
+      const routes = [
+        {
+          method: 'GET',
+          path: '/test',
+          handler: async () => ({ statusCode: 200, body: '', headers: {} })
+        }
+      ];
+      const instance = new ApiHandlerBase(routes, mockLogger);
+      
+      const response = instance.createErrorResponse(400, 'Test error', 'TEST_ERROR');
+
+      expect(response.statusCode).toBe(400);
+      expect(response).toHaveProperty('headers');
+      expect(response).toHaveProperty('body');
+      expect(response.headers).toHaveProperty('Content-Type');
+    });
+
+    it('should create success response with correct structure', () => {
+      const routes = [
+        {
+          method: 'GET',
+          path: '/test',
+          handler: async () => ({ statusCode: 200, body: '', headers: {} })
+        }
+      ];
+      const instance = new ApiHandlerBase(routes, mockLogger);
+      const testData = { result: 'success' };
+      
+      const response = instance.createSuccessResponse(200, testData);
+
+      expect(response.statusCode).toBe(200);
+      expect(response).toHaveProperty('headers');
+      expect(response).toHaveProperty('body');
+      expect(response.headers).toHaveProperty('Content-Type');
+    });
+  });
+});
