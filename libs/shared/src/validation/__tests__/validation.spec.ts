@@ -114,10 +114,13 @@ describe('Validation System', () => {
 
         const result = HTTPValidator.validateBody(event, CreateAppointmentBodySchema);
 
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors![0].field).toBe('countryISO');
-        expect(result.errors![0].message).toContain('Invalid enum value');
+  expect(result.isValid).toBe(false);
+  expect(result.errors).toHaveLength(1);
+  expect(result.errors![0].field).toBe('countryISO');
+  const msg = result.errors![0].message;
+  expect(msg).toMatch(/Invalid/);
+  expect(msg).toMatch(/PE/);
+  expect(msg).toMatch(/CL/);
       });
 
       it('should reject negative schedule ID', () => {
