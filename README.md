@@ -27,9 +27,60 @@ This application handles medical appointment scheduling for multiple countries (
 1. **Request Reception**: API Gateway → Lambda `appointment` → DynamoDB (status: "pending")
 2. **Country Routing**: Lambda `appointment` determines country → Routes to specific SNS topic (PE/CL)
 3. **Direct Processing**: Country-specific SNS topic → Country-specific SQS queue (no filtering)
-4. **Regional Processing**: Country-specific Lambda (PE/CL) → RDS PostgreSQL
+4. **Regional Processing**: Country-specific Lambda (PE/CL) → RDS MySQL (status: "scheduled")
 5. **Event Publishing**: Processing Lambda → EventBridge with completion events
 6. **Status Update**: EventBridge → SQS completion → Lambda `appointment` → DynamoDB (status: "completed")
+
+### Implemented Patterns
+
+#### SOLID Principles
+- **S**: Single Responsibility - Each class has a specific responsibility
+- **O**: Open/Closed - Extensible via interfaces and abstractions
+- **L**: Liskov Substitution - Interchangeable repository implementations
+- **I**: Interface Segregation - Specific interfaces per responsibility
+- **D**: Dependency Inversion - Dependency on abstractions, not concretions
+
+#### Design Patterns
+1. **Repository Pattern**: Persistence abstraction
+2. **Factory Pattern**: Creation of use cases and dependencies
+3. **Adapter Pattern**: Integration with AWS services
+4. **Command Pattern**: Use cases as commands
+5. **Event-Driven Pattern**: Communication via domain events
+
+#### Clean Architecture
+- **Presentation Layer**: Lambda handlers
+- **Application Layer**: Use cases (define Ports)
+- **Domain Layer**: Pure business logic (entities, rules)
+- **Infrastructure Layer**: Adapters (implement Ports with external tech)
+
+---
+
+### Production Considerations
+
+#### Security
+- [ ] Implement JWT authentication
+- [ ] Use IAM roles with least privilege
+- [ ] Configure CORS appropriately
+- [ ] Encrypt sensitive data
+- [ ] Implement rate limiting
+
+#### Performance
+- [ ] Optimize DynamoDB queries
+- [ ] Implement connection pooling for RDS
+- [ ] Configure dead letter queues
+- [ ] Implement circuit breakers
+
+#### Monitoring
+- [ ] Custom CloudWatch metrics
+- [ ] Distributed X-Ray tracing
+- [ ] Alarms for errors and latency
+- [ ] Operational dashboard
+
+#### Scalability
+- [ ] Auto-scaling for Lambda
+- [ ] Configure reserved concurrency
+- [ ] Implement backpressure in SQS
+- [ ] Partitioning strategy for DynamoDB
 
 ## 🏗️ Architecture
 
@@ -140,57 +191,6 @@ medical-appointment-scheduling/
     ├── REQUIREMENTS.md               # Business requirements
     └── diagrama.png                  # Architecture diagram
 ```
-
-## Implemented Patterns
-
-### SOLID Principles
-- **S**: Single Responsibility - Each class has a specific responsibility
-- **O**: Open/Closed - Extensible via interfaces and abstractions
-- **L**: Liskov Substitution - Interchangeable repository implementations
-- **I**: Interface Segregation - Specific interfaces per responsibility
-- **D**: Dependency Inversion - Dependency on abstractions, not concretions
-
-### Design Patterns
-1. **Repository Pattern**: Persistence abstraction
-2. **Factory Pattern**: Creation of use cases and dependencies
-3. **Adapter Pattern**: Integration with AWS services
-4. **Command Pattern**: Use cases as commands
-5. **Event-Driven Pattern**: Communication via domain events
-
-### Clean Architecture
-- **Presentation Layer**: Lambda handlers
-- **Application Layer**: Use cases (define Ports)
-- **Domain Layer**: Pure business logic (entities, rules)
-- **Infrastructure Layer**: Adapters (implement Ports with external tech)
-
----
-
-## Production Considerations
-
-### Security
-- [ ] Implement JWT authentication
-- [ ] Use IAM roles with least privilege
-- [ ] Configure CORS appropriately
-- [ ] Encrypt sensitive data
-- [ ] Implement rate limiting
-
-### Performance
-- [ ] Optimize DynamoDB queries
-- [ ] Implement connection pooling for RDS
-- [ ] Configure dead letter queues
-- [ ] Implement circuit breakers
-
-### Monitoring
-- [ ] Custom CloudWatch metrics
-- [ ] Distributed X-Ray tracing
-- [ ] Alarms for errors and latency
-- [ ] Operational dashboard
-
-### Scalability
-- [ ] Auto-scaling for Lambda
-- [ ] Configure reserved concurrency
-- [ ] Implement backpressure in SQS
-- [ ] Partitioning strategy for DynamoDB
 
 ## ⚡ Quick Start
 
@@ -308,6 +308,8 @@ npm run logs:appointment   # View appointment function logs
 npm run logs:pe           # View Peru processor logs
 npm run logs:cl           # View Chile processor logs
 npm run start:local       # Start serverless offline
+
+# More scripts available in package.json
 ```
 
 ### Environment Variables
@@ -515,25 +517,45 @@ GET /appointments/00123
 **Response (200 OK):**
 ```json
 {
-  "data": {
-    "appointments": [
-      {
-        "appointmentId": "550e8400-e29b-41d4-a716-446655440000",
-        "insuredId": "00123",
-        "scheduleId": 100,
-        "countryISO": "PE",
-        "status": "completed",
-        "createdAt": "2024-09-11T10:00:00Z",
-        "updatedAt": "2024-09-11T10:05:00Z",
-        "processedAt": "2024-09-11T10:03:00Z"
-      }
-    ],
-    "pagination": {
-      "count": 1
+    "data": {
+        "appointments": [
+            {
+                "appointmentId": "b81fbb9f-d76e-4361-b06a-9e1b7d87f27b",
+                "countryISO": "PE",
+                "createdAt": "2025-09-14T12:08:36.519Z",
+                "insuredId": "10133",
+                "processedAt": null,
+                "schedule": {
+                    "centerId": 1,
+                    "date": "2025-09-17T04:29:13.000Z",
+                    "medicId": 1,
+                    "specialtyId": 1
+                },
+                "scheduleId": 5,
+                "status": "completed",
+                "updatedAt": "2025-09-14T12:08:38.300Z"
+            }
+        ],
+        "pagination": {
+            "count": 1,
+            "total": 1,
+            "limit": 20,
+            "offset": 0,
+            "hasMore": false,
+            "totalPages": 1,
+            "currentPage": 1
+        },
+        "filters": {
+            "status": null,
+            "startDate": null,
+            "endDate": null
+        },
+        "meta": {
+            "totalAvailable": 1,
+            "totalFiltered": 1,
+            "filterApplied": false
+        }
     }
-  },
-  "timestamp": "2024-09-11T10:00:00Z"
-}
 ```
 
 ### OpenAPI/Swagger Documentation
@@ -544,8 +566,14 @@ Complete API documentation is available in OpenAPI 3.0 format:
 # View the OpenAPI specification
 cat docs/openapi.yml
 
+# View Swagger docs
+cat docs/swagger.json
+
 # Generate interactive documentation (if you have swagger-ui)
 npx swagger-ui-serve docs/openapi.yml
+
+# Generate swagger.json
+npm run docs:generate
 ```
 
 ## 🏗️ Infrastructure
@@ -562,7 +590,7 @@ The application uses the following AWS services:
 | **SNS** | Message distribution (3 topics - main + per country) | `resources/sns.yml` |
 | **SQS** | Message queuing for processing | `resources/sqs.yml` |
 | **EventBridge** | Event-driven communication | `resources/eventbridge.yml` |
-| **RDS PostgreSQL** | Country-specific appointment storage | External (pre-existing) |
+| **RDS MySQL** | Country-specific appointment storage | External `infrastructure/serverless.yml` |
 | **IAM** | Security and permissions | `resources/iam.yml` |
 | **CloudWatch** | Logging and monitoring | Built-in |
 
