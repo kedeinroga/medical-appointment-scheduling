@@ -1,7 +1,5 @@
 import { 
   Appointment, 
-  AppointmentCreatedEvent, 
-  AppointmentId, 
   CountryISO, 
   IAppointmentRepository, 
   IMessagingPort,

@@ -2,9 +2,6 @@
 import { SQSClient, SendMessageCommand, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs';
 import { Logger } from '@aws-lambda-powertools/logger';
 
-// Domain imports
-import { CountryISO } from '@medical-appointment/core-domain';
-
 // Infrastructure imports
 import { AWS_CONFIG, getSQSUrlByCountry } from '../../config/aws.config';
 import { SQSError } from '../../errors/aws.errors';

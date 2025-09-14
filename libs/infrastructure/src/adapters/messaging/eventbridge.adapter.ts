@@ -4,7 +4,6 @@ import { Logger } from '@aws-lambda-powertools/logger';
 
 // Domain imports
 import { 
-  CountryISO,
   DomainEvent,
   IEventBus
 } from '@medical-appointment/core-domain';

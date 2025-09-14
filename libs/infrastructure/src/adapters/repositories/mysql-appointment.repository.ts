@@ -6,7 +6,6 @@ import { Logger } from '@aws-lambda-powertools/logger';
 import { 
   Appointment,
   AppointmentId,
-  CountryISO,
   IAppointmentRepository,
   InsuredId
 } from '@medical-appointment/core-domain';

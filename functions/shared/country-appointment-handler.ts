@@ -144,13 +144,6 @@ export class CountryAppointmentHandler {
     const requestId = context.awsRequestId;
 
     try {
-      // Log lambda invocation
-      console.log(`${this.config.countryCode} Lambda invoked`, {
-        requestId,
-        recordCount: event.Records.length,
-        timestamp: new Date().toISOString()
-      });
-
       const startTime = Date.now();
       const totalRecords = event.Records.length;
 

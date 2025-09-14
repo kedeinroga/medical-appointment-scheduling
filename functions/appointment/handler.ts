@@ -5,12 +5,12 @@
  */
 
 // External dependencies
-import { APIGatewayProxyEvent, APIGatewayProxyResult, SQSEvent, Handler, Context } from 'aws-lambda';
+import { APIGatewayProxyEvent, SQSEvent, Handler, Context } from 'aws-lambda';
 import { Logger } from '@aws-lambda-powertools/logger';
 
 // Application layer
-import { CompleteAppointmentDto, CompleteAppointmentUseCase, UseCaseFactory } from '@medical-appointment/core-use-cases';
-import { logInfrastructureError, maskInsuredId } from '@medical-appointment/shared';
+import { CompleteAppointmentDto, UseCaseFactory } from '@medical-appointment/core-use-cases';
+import { maskInsuredId } from '@medical-appointment/shared';
 
 // Infrastructure layer
 import { AdapterFactory } from '@medical-appointment/infrastructure';
@@ -86,7 +86,7 @@ export const main: Handler = async (event: any, context: Context): Promise<any> 
 };
 
 /**
- * Handle SQS completion events (sin cambios - mantiene funcionalidad existente)
+ * Handle SQS completion events
  */
 const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> => {
   const requestId = context.awsRequestId;
@@ -110,7 +110,10 @@ const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> 
       try {
         // Parse the SQS record body
         const eventData = JSON.parse(record.body);
-        
+
+        //TODO: Move this conditional to the use case
+        // await completeAppointmentUseCase.execute(eventData);
+
         // Handle EventBridge format (with detail wrapper)
         let actualData = eventData;
         if (eventData.detail && eventData['detail-type']) {
