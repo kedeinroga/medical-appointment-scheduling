@@ -5,7 +5,7 @@ import { AppointmentStatus } from '../../value-objects/appointment-status.vo';
 import { CountryISO } from '../../value-objects/country-iso.vo';
 import { InsuredId } from '../../value-objects/insured-id.vo';
 
-describe('Appointment', () => {
+describe(Appointment.name, () => {
   const createValidInsured = () => {
     return Insured.fromPrimitives({
       countryISO: 'PE',
