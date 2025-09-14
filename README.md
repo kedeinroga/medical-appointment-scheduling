@@ -7,8 +7,6 @@ A robust backend application for scheduling medical appointments built with **Se
 - [🚀 Overview](#-overview)
 - [🏗️ Architecture](#️-architecture)
 - [📁 Project Structure](#-project-structure)
-- [Implemented Patterns](#-implemented-patterns)
-- [Production Considerations](#-production-considerations)
 - [⚡ Quick Start](#-quick-start)
 - [🔧 Development](#-development)
 - [🧪 Testing](#-testing)
