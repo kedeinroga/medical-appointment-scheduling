@@ -1,6 +1,7 @@
 /**
- * Appointment Lambda Handler - Refactored with DRY principles
- * Uses shared commons and extracted route handlers
+ * Appointment Lambda Handler - DRY Refactored
+ * Uses EnhancedAppointmentRouteHandlers from route-handlers.ts 
+ * for robust validation without code duplication
  */
 
 // External dependencies
@@ -19,7 +20,7 @@ import { ApiHandlerBase, RouteConfig } from '../shared/api-handler-base';
 
 // Same layer modules
 import { APPOINTMENT_API } from './constants';
-import { AppointmentRouteHandlers } from './route-handlers';
+import { EnhancedAppointmentRouteHandlers } from './route-handlers';
 
 // Initialize logger
 const logger = new Logger({
@@ -46,8 +47,8 @@ const getAppointmentsUseCase = UseCaseFactory.createGetAppointmentsByInsuredIdUs
   mysqlRepository
 );
 
-// Initialize route handlers
-const routeHandlers = new AppointmentRouteHandlers(
+// Initialize enhanced route handlers with validation (using DRY principle)
+const routeHandlers = new EnhancedAppointmentRouteHandlers(
   logger,
   createAppointmentUseCase,
   getAppointmentsUseCase
@@ -65,9 +66,7 @@ const routes: RouteConfig[] = [
     path: APPOINTMENT_API.PATHS.APPOINTMENTS_BY_INSURED,
     handler: (event: APIGatewayProxyEvent, context: Context) => routeHandlers.handleGetAppointments(event)
   }
-];
-
-// Initialize API handler
+];// Initialize API handler
 const apiHandler = new ApiHandlerBase(routes, logger);
 
 /**
@@ -76,10 +75,10 @@ const apiHandler = new ApiHandlerBase(routes, logger);
 export const main: Handler = async (event: any, context: Context): Promise<any> => {
   // Detect event type
   if (event.Records && Array.isArray(event.Records)) {
-    // SQS Event - handle completion
+    // SQS Event - handle completion (sin cambios)
     return handleSQSEvent(event as SQSEvent, context);
   } else if (event.httpMethod) {
-    // API Gateway Event - handle HTTP requests using commons
+    // API Gateway Event - handle HTTP requests with validation
     return apiHandler.handle(event as APIGatewayProxyEvent, context);
   } else {
     throw new Error('Unknown event type');
@@ -87,7 +86,7 @@ export const main: Handler = async (event: any, context: Context): Promise<any> 
 };
 
 /**
- * Handle SQS completion events
+ * Handle SQS completion events (sin cambios - mantiene funcionalidad existente)
  */
 const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> => {
   const requestId = context.awsRequestId;

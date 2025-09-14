@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Medical Appointment Scheduling API",
-    "description": "A robust backend API for scheduling medical appointments using AWS serverless architecture.\n\n## Overview\nThis API handles medical appointment scheduling for multiple countries (Peru and Chile) \nusing an event-driven architecture. The system processes appointment requests asynchronously \nand maintains data consistency across different regional databases.\n\n## Business Flow\n1. **Request Reception**: Create appointment (status: \"pending\")\n2. **Distribution**: Route to country-specific processors\n3. **Processing**: Store in country-specific database\n4. **Completion**: Update status to \"completed\"\n\n\n**Generated at:** 2025-09-14T07:09:15.541Z",
+    "description": "A robust backend API for scheduling medical appointments using AWS serverless architecture.\n\n## Overview\nThis API handles medical appointment scheduling for multiple countries (Peru and Chile) \nusing an event-driven architecture. The system processes appointment requests asynchronously \nand maintains data consistency across different regional databases.\n\n## Business Flow\n1. **Request Reception**: Create appointment (status: \"pending\")\n2. **Distribution**: Route to country-specific processors\n3. **Processing**: Store in country-specific database\n4. **Completion**: Update status to \"completed\"\n\n\n**Generated at:** 2025-09-14T09:35:30.507Z",
     "version": "1.0.0",
     "contact": {
       "name": "Medical Appointment API Support",

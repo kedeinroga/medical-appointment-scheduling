@@ -4,18 +4,8 @@
  */
 
 import { Logger } from '@aws-lambda-powertools/logger';
+import { maskInsuredId } from '@medical-appointment/shared'; // Use shared utility
 import { APPOINTMENT_OPERATIONS } from './constants';
-
-/**
- * Mask sensitive insured ID for logging purposes
- * Shows only first and last characters
- */
-export const maskInsuredId = (insuredId: string): string => {
-  if (!insuredId || insuredId.length < 3) {
-    return '***';
-  }
-  return `${insuredId.charAt(0)}${'*'.repeat(insuredId.length - 2)}${insuredId.charAt(insuredId.length - 1)}`;
-};
 
 /**
  * Log appointment creation with structured logging
