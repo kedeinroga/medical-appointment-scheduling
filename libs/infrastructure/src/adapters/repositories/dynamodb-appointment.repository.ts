@@ -17,10 +17,15 @@ import {
 import { AppointmentNotFoundError, DynamoDBError } from '../../errors/aws.errors';
 import { AWS_CONFIG } from '../../config/aws.config';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 /**
  * DynamoDB implementation of the Appointment Repository
  * Follows the Repository pattern to abstract data persistence concerns
+ * Uses @Singleton decorator to ensure only one instance manages the DynamoDB connection
  */
+@Singleton
 export class DynamoDBAppointmentRepository implements IAppointmentRepository {
   private readonly dynamoClient: DynamoDBDocumentClient;
   private readonly logger: Logger;

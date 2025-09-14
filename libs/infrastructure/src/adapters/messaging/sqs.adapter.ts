@@ -9,10 +9,15 @@ import { CountryISO } from '@medical-appointment/core-domain';
 import { AWS_CONFIG, getSQSUrlByCountry } from '../../config/aws.config';
 import { SQSError } from '../../errors/aws.errors';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 /**
  * SQS Adapter for queue operations
  * Implements the Adapter pattern to integrate with AWS SQS
+ * Uses @Singleton decorator to ensure efficient SQS client management
  */
+@Singleton
 export class SQSAdapter {
   private readonly sqsClient: SQSClient;
   private readonly logger: Logger;

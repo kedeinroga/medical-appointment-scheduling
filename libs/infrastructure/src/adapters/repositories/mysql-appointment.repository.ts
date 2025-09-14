@@ -15,12 +15,17 @@ import {
 import { AWS_CONFIG } from '../../config/aws.config';
 import { DatabaseConnectionError } from '../../errors/aws.errors';
 
+// Shared imports
+import { Singleton } from '@medical-appointment/shared';
+
 /**
  * MySQL implementation of the Appointment Repository for RDS
  * Handles country-specific appointment data storage according to requirements
  * - appointment_pe table for Peru appointments
  * - appointment_cl table for Chile appointments
+ * Uses @Singleton decorator to ensure efficient connection pool management
  */
+@Singleton
 export class MySQLAppointmentRepository implements IAppointmentRepository {
   private readonly logger: Logger;
   private pool: Pool;

@@ -12,6 +12,7 @@ import { SQSAdapter } from '../adapters/messaging/sqs.adapter';
 /**
  * Factory for creating adapter instances with proper dependency injection
  * Implements the Factory pattern and Singleton pattern for infrastructure adapters
+ * Uses static methods to manage singleton instances efficiently
  */
 export class AdapterFactory {
   private static instances: Map<string, any> = new Map();

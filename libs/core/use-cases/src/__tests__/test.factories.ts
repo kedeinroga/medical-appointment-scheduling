@@ -6,7 +6,6 @@
 import { CountryISO, Schedule } from '@medical-appointment/core-domain';
 import { CreateAppointmentDto } from '../create-appointment/create-appointment.dto';
 import { GetAppointmentsDto } from '../get-appointments/get-appointments.dto';
-import { ProcessAppointmentDto } from '../process-appointment/process-appointment.dto';
 import { CompleteAppointmentDto } from '../complete-appointment/complete-appointment.dto';
 import { TEST_DATA, TEST_SCHEDULES, TEST_APPOINTMENTS } from './test.constants';
 
@@ -49,19 +48,6 @@ export class AppointmentTestFactory {
   static createGetAppointmentsDto(overrides?: Partial<GetAppointmentsDto>): GetAppointmentsDto {
     return {
       insuredId: TEST_DATA.VALID_INSURED_IDS[0],
-      ...overrides
-    };
-  }
-
-  /**
-   * Creates a ProcessAppointmentDto
-   */
-  static createProcessDto(overrides?: Partial<ProcessAppointmentDto>): ProcessAppointmentDto {
-    return {
-      appointmentId: TEST_DATA.VALID_APPOINTMENT_IDS[0],
-      countryISO: TEST_DATA.VALID_COUNTRIES[0],
-      insuredId: TEST_DATA.VALID_INSURED_IDS[0],
-      scheduleId: TEST_DATA.VALID_SCHEDULE_IDS[1],
       ...overrides
     };
   }

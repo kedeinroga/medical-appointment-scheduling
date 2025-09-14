@@ -3,6 +3,7 @@ import { Logger } from '@aws-lambda-powertools/logger';
 
 import { MySQLAppointmentRepository } from '../mysql-appointment.repository';
 import { DatabaseConnectionError } from '../../../errors/aws.errors';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 // Mock dependencies
 jest.mock('mysql2/promise');
@@ -32,6 +33,7 @@ describe('MySQLAppointmentRepository', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSingletonInstances(); // Clear singleton instances between tests
 
     // Mock Logger
     mockLogger = {

@@ -11,9 +11,6 @@ export * from './adapters/messaging/eventbridge.adapter';
 export * from './adapters/messaging/sns.adapter';
 export * from './adapters/messaging/sqs.adapter';
 
-// Adapters - Lambda
-export * from './adapters/lambda/lambda-handler.adapter';
-
 // Configuration
 export * from './config/aws.config';
 export * from './config/database.config';
@@ -22,7 +19,6 @@ export * from './config/environment.config';
 // Factories
 export * from './factories/adapter.factory';
 export * from './factories/country-processing.factory';
-export * from './factories/use-case.factory';
 
 // Errors
 export * from './errors/aws.errors';

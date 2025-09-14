@@ -9,16 +9,41 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
   })),
 }));
 
-// Mock the country processing factory
+// Mock the infrastructure factories
+const mockProcessAppointmentUseCase = {
+  execute: jest.fn().mockResolvedValue({
+    appointmentId: 'test-id',
+    status: 'processed'
+  })
+};
+
 jest.mock('@medical-appointment/infrastructure', () => ({
   CountryProcessingFactory: {
-    createProcessAppointmentUseCase: jest.fn().mockReturnValue({
-      execute: jest.fn().mockResolvedValue({
-        appointmentId: 'test-id',
-        status: 'processed',
-        message: 'Appointment processed for PE'
-      })
+    createCountryProcessingAdapters: jest.fn().mockReturnValue({
+      appointmentRepository: {},
+      eventBridgeAdapter: {},
+      scheduleRepository: {}
     })
+  }
+}));
+
+jest.mock('@medical-appointment/core-use-cases', () => ({
+  CountryProcessingCompositionFactory: {
+    createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue(mockProcessAppointmentUseCase)
+  }
+}));
+
+// Mock shared utilities
+jest.mock('@medical-appointment/shared', () => ({
+  logBusinessError: jest.fn(),
+  logInfrastructureError: jest.fn(),
+  maskInsuredId: jest.fn((id) => `${id.substring(0, 2)}***`)
+}));
+
+// Mock domain
+jest.mock('@medical-appointment/core-domain', () => ({
+  CountryISO: {
+    fromString: jest.fn().mockReturnValue({ value: 'PE' })
   }
 }));
 
@@ -81,9 +106,13 @@ describe('Appointment PE Lambda Handler', () => {
 
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
-      // Verify that the factory method was called (indicating the handler processed the message)
-      const { CountryProcessingFactory } = require('@medical-appointment/infrastructure');
-      expect(CountryProcessingFactory.createProcessAppointmentUseCase).toHaveBeenCalled();
+      // Verify that the use case was called (indicating the handler processed the message)
+      expect(mockProcessAppointmentUseCase.execute).toHaveBeenCalledWith({
+        appointmentId: 'test-id',
+        insuredId: '12345',
+        scheduleId: 100,
+        countryISO: 'PE'
+      });
     });
 
     it('should skip message for wrong country', async () => {
@@ -100,7 +129,7 @@ describe('Appointment PE Lambda Handler', () => {
 
       // Should not call the use case factory for wrong country
       const { CountryProcessingFactory } = require('@medical-appointment/infrastructure');
-      expect(CountryProcessingFactory.createProcessAppointmentUseCase).not.toHaveBeenCalled();
+      expect(CountryProcessingFactory.createCountryProcessingAdapters).not.toHaveBeenCalled();
     });
 
     it('should handle validation errors gracefully', async () => {
@@ -116,7 +145,7 @@ describe('Appointment PE Lambda Handler', () => {
 
       // Should not call the use case when validation fails
       const { CountryProcessingFactory } = require('@medical-appointment/infrastructure');
-      expect(CountryProcessingFactory.createProcessAppointmentUseCase).not.toHaveBeenCalled();
+      expect(CountryProcessingFactory.createCountryProcessingAdapters).not.toHaveBeenCalled();
     });
 
     it('should handle invalid JSON gracefully', async () => {
@@ -144,8 +173,8 @@ describe('Appointment PE Lambda Handler', () => {
       await expect(main(event, mockContext, () => {})).resolves.toBeUndefined();
 
       // Should not call the use case when JSON is invalid
-      const mockUseCase = require('@medical-appointment/infrastructure').CountryProcessingFactory.createProcessAppointmentUseCase();
-      expect(mockUseCase.execute).not.toHaveBeenCalled();
+      const { CountryProcessingCompositionFactory } = require('@medical-appointment/core-use-cases');
+      expect(CountryProcessingCompositionFactory.createProcessCountryAppointmentUseCase).not.toHaveBeenCalled();
     });
   });
 });

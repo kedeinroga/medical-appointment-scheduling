@@ -8,6 +8,7 @@ import {
   AppointmentStatus,
   InsuredId
 } from '../../../../../../libs/core/domain/src';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 jest.mock('@aws-sdk/client-dynamodb');
 jest.mock('@aws-sdk/lib-dynamodb');
@@ -51,6 +52,7 @@ describe('DynamoDBAppointmentRepository - Comprehensive Coverage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSingletonInstances(); // Clear singleton instances between tests
     
     mockDynamoClient = {
       send: jest.fn()

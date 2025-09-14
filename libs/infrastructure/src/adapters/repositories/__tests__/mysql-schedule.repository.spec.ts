@@ -4,6 +4,7 @@ import { Schedule } from '../../../../../core/domain/src/entities/schedule.entit
 import { createPool } from 'mysql2/promise';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { DatabaseConnectionError } from '../../../errors/aws.errors';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 // Mock dependencies
 jest.mock('mysql2/promise');
@@ -25,6 +26,8 @@ describe(MySQLScheduleRepository.name, () => {
   let mockLogger: jest.Mocked<Logger>;
 
   beforeEach(() => {
+    clearSingletonInstances(); // Clear singleton instances between tests
+    
     mockConnection = {
       execute: jest.fn(),
       release: jest.fn()

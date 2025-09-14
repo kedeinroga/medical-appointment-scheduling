@@ -6,6 +6,9 @@ export * from './utils/pii-masking.util';
 export * from './utils/api-gateway.util';
 export * from './utils/logging.util';
 
+// Decorators
+export * from './decorators/singleton/singleton.decorators';
+
 // Exceptions
 export * from './exceptions/business.exceptions';
 

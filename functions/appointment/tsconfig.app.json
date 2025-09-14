@@ -14,5 +14,5 @@
     { "path": "../../libs/shared" }
   ],
   "exclude": ["jest.config.js", "**/*.spec.ts", "**/*.test.ts", "__tests__/**/*"],
-  "include": ["*.ts", "src/**/*.ts"]
+  "include": ["*.ts", "src/**/*.ts", "../shared/**/*.ts"]
 }

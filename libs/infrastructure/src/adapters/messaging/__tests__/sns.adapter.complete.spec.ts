@@ -3,6 +3,7 @@ import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { CountryISO } from '../../../../../../libs/core/domain/src';
 import { SNSError } from '../../../errors/aws.errors';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 jest.mock('@aws-sdk/client-sns');
 jest.mock('@aws-lambda-powertools/logger');
@@ -32,6 +33,7 @@ describe('SNSAdapter - Complete Coverage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSingletonInstances(); // Clear singleton instances between tests
     
     mockSNSClient = {
       send: jest.fn()

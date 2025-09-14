@@ -1,62 +1,28 @@
 import { CountryProcessingFactory } from '../country-processing.factory';
-import { ProcessCountryAppointmentUseCase } from '../../../../../libs/core/use-cases/src/process-country-appointment/process-country-appointment.use-case';
-import { CountryISO } from '../../../../../libs/core/domain/src/value-objects/country-iso.vo';
 import { MySQLAppointmentRepository } from '../../adapters/repositories/mysql-appointment.repository';
 import { MySQLScheduleRepository } from '../../adapters/repositories/mysql-schedule.repository';
 import { EventBridgeAdapter } from '../../adapters/messaging/eventbridge.adapter';
-
-// Mock all dependencies
-jest.mock('../../adapters/repositories/mysql-appointment.repository');
-jest.mock('../../adapters/repositories/mysql-schedule.repository');
-jest.mock('../../adapters/messaging/eventbridge.adapter');
-jest.mock('../../../../../libs/core/use-cases/src/process-country-appointment/process-country-appointment.use-case');
+import { CountryISO } from '../../../../../libs/core/domain/src/value-objects/country-iso.vo';
+import { clearSingletonInstances } from '../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 describe('CountryProcessingFactory', () => {
   beforeEach(() => {
-    // Reset factory state before each test
     CountryProcessingFactory.reset();
-    jest.clearAllMocks();
-  });
-
-  describe('createProcessAppointmentUseCase', () => {
-    it('should create ProcessCountryAppointmentUseCase with proper dependencies', () => {
-      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
-      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
-
-      const result = CountryProcessingFactory.createProcessAppointmentUseCase();
-
-      expect(ProcessCountryAppointmentUseCase).toHaveBeenCalledWith(
-        expect.any(Object), // MySQLAppointmentRepository
-        expect.any(Object), // EventBridgeAdapter
-        expect.any(Object)  // MySQLScheduleRepository
-      );
-      expect(result).toBe(mockUseCase);
-    });
-
-    it('should create ProcessCountryAppointmentUseCase for specific country', () => {
-      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
-      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
-
-      const peCountry = CountryISO.fromString('PE');
-      const result = CountryProcessingFactory.createProcessAppointmentUseCase(peCountry);
-
-      expect(result).toBe(mockUseCase);
-    });
+    clearSingletonInstances(); // Clear singleton instances between tests
   });
 
   describe('getMySQLAppointmentRepository', () => {
     it('should create and return MySQLAppointmentRepository instance', () => {
       const result = CountryProcessingFactory.getMySQLAppointmentRepository();
 
-      expect(result).toBeDefined();
-      expect(result).toBeInstanceOf(Object);
+      expect(result).toBeInstanceOf(MySQLAppointmentRepository);
     });
 
     it('should return same instance on subsequent calls (singleton)', () => {
-      const result1 = CountryProcessingFactory.getMySQLAppointmentRepository();
-      const result2 = CountryProcessingFactory.getMySQLAppointmentRepository();
+      const instance1 = CountryProcessingFactory.getMySQLAppointmentRepository();
+      const instance2 = CountryProcessingFactory.getMySQLAppointmentRepository();
 
-      expect(result1).toBe(result2);
+      expect(instance1).toBe(instance2);
     });
   });
 
@@ -64,112 +30,83 @@ describe('CountryProcessingFactory', () => {
     it('should create and return MySQLScheduleRepository instance', () => {
       const result = CountryProcessingFactory.getScheduleRepository();
 
-      expect(result).toBeDefined();
-      expect(result).toBeInstanceOf(Object);
+      expect(result).toBeInstanceOf(MySQLScheduleRepository);
     });
 
     it('should return same instance on subsequent calls (singleton)', () => {
-      const result1 = CountryProcessingFactory.getScheduleRepository();
-      const result2 = CountryProcessingFactory.getScheduleRepository();
+      const instance1 = CountryProcessingFactory.getScheduleRepository();
+      const instance2 = CountryProcessingFactory.getScheduleRepository();
 
-      expect(result1).toBe(result2);
+      expect(instance1).toBe(instance2);
     });
   });
 
   describe('getEventBridgeAdapter', () => {
     it('should create and return EventBridgeAdapter instance', () => {
-      const mockAdapter = {} as EventBridgeAdapter;
-      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockAdapter);
-
       const result = CountryProcessingFactory.getEventBridgeAdapter();
 
-      expect(result).toBe(mockAdapter);
+      expect(result).toBeInstanceOf(EventBridgeAdapter);
     });
 
     it('should return same instance on subsequent calls (singleton)', () => {
-      const mockAdapter = {} as EventBridgeAdapter;
-      (EventBridgeAdapter as jest.Mock).mockReturnValue(mockAdapter);
+      const instance1 = CountryProcessingFactory.getEventBridgeAdapter();
+      const instance2 = CountryProcessingFactory.getEventBridgeAdapter();
 
-      const result1 = CountryProcessingFactory.getEventBridgeAdapter();
-      const result2 = CountryProcessingFactory.getEventBridgeAdapter();
-
-      expect(result1).toBe(result2);
+      expect(instance1).toBe(instance2);
     });
   });
 
-  describe('createCountryProcessingDependencies', () => {
-    it('should create all dependencies for country processing', () => {
-      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
-      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
-
+  describe('createCountryProcessingAdapters', () => {
+    it('should create all adapters needed for country processing', () => {
       const peCountry = CountryISO.fromString('PE');
-      const result = CountryProcessingFactory.createCountryProcessingDependencies(peCountry);
+      const result = CountryProcessingFactory.createCountryProcessingAdapters(peCountry);
 
       expect(result.appointmentRepository).toBeDefined();
       expect(result.scheduleRepository).toBeDefined();
       expect(result.eventBridgeAdapter).toBeDefined();
-      expect(result.processAppointmentUseCase).toBe(mockUseCase);
+      
+      expect(result.appointmentRepository).toBeInstanceOf(MySQLAppointmentRepository);
+      expect(result.scheduleRepository).toBeInstanceOf(MySQLScheduleRepository);
+      expect(result.eventBridgeAdapter).toBeInstanceOf(EventBridgeAdapter);
     });
 
-    it('should create dependencies for different countries', () => {
-      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
-      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
-
+    it('should create adapters for different countries', () => {
       const peCountry = CountryISO.fromString('PE');
       const clCountry = CountryISO.fromString('CL');
 
-      const peResult = CountryProcessingFactory.createCountryProcessingDependencies(peCountry);
-      const clResult = CountryProcessingFactory.createCountryProcessingDependencies(clCountry);
+      const peResult = CountryProcessingFactory.createCountryProcessingAdapters(peCountry);
+      const clResult = CountryProcessingFactory.createCountryProcessingAdapters(clCountry);
 
-      expect(peResult).toBeDefined();
-      expect(clResult).toBeDefined();
+      expect(peResult.appointmentRepository).toBeDefined();
+      expect(clResult.appointmentRepository).toBeDefined();
+      
+      // Should use same instances (singleton behavior)
+      expect(peResult.appointmentRepository).toBe(clResult.appointmentRepository);
+      expect(peResult.scheduleRepository).toBe(clResult.scheduleRepository);
+      expect(peResult.eventBridgeAdapter).toBe(clResult.eventBridgeAdapter);
     });
   });
 
   describe('reset', () => {
     it('should reset all singleton instances', () => {
       // Create instances
-      CountryProcessingFactory.getMySQLAppointmentRepository();
-      CountryProcessingFactory.getScheduleRepository();
-      CountryProcessingFactory.getEventBridgeAdapter();
+      const instance1 = CountryProcessingFactory.getMySQLAppointmentRepository();
+      const instance2 = CountryProcessingFactory.getScheduleRepository();
+      const instance3 = CountryProcessingFactory.getEventBridgeAdapter();
 
-      // Reset factory
+      // Reset both factory and singleton instances
       CountryProcessingFactory.reset();
+      clearSingletonInstances(); // Clear singleton decorator instances
 
-      // Create instances again - should work without errors
-      const repo1 = CountryProcessingFactory.getMySQLAppointmentRepository();
-      const repo2 = CountryProcessingFactory.getScheduleRepository();
-      const adapter = CountryProcessingFactory.getEventBridgeAdapter();
+      // Create instances again - should create new ones
+      const newInstance1 = CountryProcessingFactory.getMySQLAppointmentRepository();
+      const newInstance2 = CountryProcessingFactory.getScheduleRepository();
+      const newInstance3 = CountryProcessingFactory.getEventBridgeAdapter();
 
-      expect(repo1).toBeDefined();
-      expect(repo2).toBeDefined();
-      expect(adapter).toBeDefined();
-    });
-  });
-
-  describe('integration behavior', () => {
-    it('should use same repository instances across different method calls', () => {
-      const mockUseCase = {} as ProcessCountryAppointmentUseCase;
-      (ProcessCountryAppointmentUseCase as jest.Mock).mockReturnValue(mockUseCase);
-
-      // Get dependencies individually
-      const appointmentRepo = CountryProcessingFactory.getMySQLAppointmentRepository();
-      const scheduleRepo = CountryProcessingFactory.getScheduleRepository();
-      const eventAdapter = CountryProcessingFactory.getEventBridgeAdapter();
-
-      // Create use case
-      const useCase = CountryProcessingFactory.createProcessAppointmentUseCase();
-
-      // Create country dependencies
-      const peCountry = CountryISO.fromString('PE');
-      const dependencies = CountryProcessingFactory.createCountryProcessingDependencies(peCountry);
-
-      // All should be defined
-      expect(appointmentRepo).toBeDefined();
-      expect(scheduleRepo).toBeDefined();
-      expect(eventAdapter).toBeDefined();
-      expect(useCase).toBeDefined();
-      expect(dependencies).toBeDefined();
+      // Should be different instances after reset
+      expect(newInstance1).not.toBe(instance1);
+      expect(newInstance2).not.toBe(instance2);
+      expect(newInstance3).not.toBe(instance3);
     });
   });
 });

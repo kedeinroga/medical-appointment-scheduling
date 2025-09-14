@@ -2,6 +2,7 @@ import { SQSAdapter } from '../sqs.adapter';
 import { SQSClient, SendMessageCommand, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { SQSError } from '../../../errors/aws.errors';
+import { clearSingletonInstances } from '../../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 jest.mock('@aws-sdk/client-sqs');
 jest.mock('@aws-lambda-powertools/logger');
@@ -26,6 +27,7 @@ describe('SQSAdapter - Comprehensive Coverage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSingletonInstances(); // Clear singleton instances between tests
     
     mockSQSClient = {
       send: jest.fn()

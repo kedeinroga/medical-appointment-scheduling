@@ -1,5 +1,6 @@
 import { AdapterFactory } from '../adapter.factory';
 import { CountryISO } from '../../../../core/domain/src/value-objects/country-iso.vo';
+import { clearSingletonInstances } from '../../../../../libs/shared/src/decorators/singleton/singleton.decorators';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-dynamodb', () => ({
@@ -46,6 +47,7 @@ jest.mock('mysql2/promise', () => ({
 describe(AdapterFactory.name, () => {
   beforeEach(() => {
     AdapterFactory.reset();
+    clearSingletonInstances(); // Clear singleton instances between tests
   });
 
   afterEach(() => {
@@ -99,11 +101,12 @@ describe(AdapterFactory.name, () => {
       expect(repository.constructor.name).toBe('MySQLScheduleRepository');
     });
 
-    it('should return different instances for different countries', () => {
+    it('should return same singleton instance for all countries (decorator pattern)', () => {
       const repositoryPE = AdapterFactory.createScheduleRepository('PE');
       const repositoryCL = AdapterFactory.createScheduleRepository('CL');
       
-      expect(repositoryPE).not.toBe(repositoryCL);
+      // With @Singleton decorator, all instances of the same class are the same
+      expect(repositoryPE).toBe(repositoryCL);
     });
 
     it('should return the same instance for the same country (singleton per country)', () => {
@@ -256,10 +259,11 @@ describe(AdapterFactory.name, () => {
       expect(AdapterFactory.getInstances().size).toBe(0);
     });
 
-    it('should create new instances after reset', () => {
+    it('should create new instances after reset (with singleton clearing)', () => {
       const adapter1 = AdapterFactory.createSNSAdapter();
       
       AdapterFactory.reset();
+      clearSingletonInstances(); // Also clear singleton instances
       
       const adapter2 = AdapterFactory.createSNSAdapter();
       
