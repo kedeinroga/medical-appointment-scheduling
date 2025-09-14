@@ -7,6 +7,8 @@ A robust backend application for scheduling medical appointments built with **Se
 - [🚀 Overview](#-overview)
 - [🏗️ Architecture](#️-architecture)
 - [📁 Project Structure](#-project-structure)
+- [Implemented Patterns](#-implemented-patterns)
+- [Production Considerations](#-production-considerations)
 - [⚡ Quick Start](#-quick-start)
 - [🔧 Development](#-development)
 - [🧪 Testing](#-testing)
@@ -138,6 +140,57 @@ medical-appointment-scheduling/
     ├── REQUIREMENTS.md               # Business requirements
     └── diagrama.png                  # Architecture diagram
 ```
+
+## Implemented Patterns
+
+### SOLID Principles
+- **S**: Single Responsibility - Each class has a specific responsibility
+- **O**: Open/Closed - Extensible via interfaces and abstractions
+- **L**: Liskov Substitution - Interchangeable repository implementations
+- **I**: Interface Segregation - Specific interfaces per responsibility
+- **D**: Dependency Inversion - Dependency on abstractions, not concretions
+
+### Design Patterns
+1. **Repository Pattern**: Persistence abstraction
+2. **Factory Pattern**: Creation of use cases and dependencies
+3. **Adapter Pattern**: Integration with AWS services
+4. **Command Pattern**: Use cases as commands
+5. **Event-Driven Pattern**: Communication via domain events
+
+### Clean Architecture
+- **Presentation Layer**: Lambda handlers
+- **Application Layer**: Use cases (define Ports)
+- **Domain Layer**: Pure business logic (entities, rules)
+- **Infrastructure Layer**: Adapters (implement Ports with external tech)
+
+---
+
+## Production Considerations
+
+### Security
+- [ ] Implement JWT authentication
+- [ ] Use IAM roles with least privilege
+- [ ] Configure CORS appropriately
+- [ ] Encrypt sensitive data
+- [ ] Implement rate limiting
+
+### Performance
+- [ ] Optimize DynamoDB queries
+- [ ] Implement connection pooling for RDS
+- [ ] Configure dead letter queues
+- [ ] Implement circuit breakers
+
+### Monitoring
+- [ ] Custom CloudWatch metrics
+- [ ] Distributed X-Ray tracing
+- [ ] Alarms for errors and latency
+- [ ] Operational dashboard
+
+### Scalability
+- [ ] Auto-scaling for Lambda
+- [ ] Configure reserved concurrency
+- [ ] Implement backpressure in SQS
+- [ ] Partitioning strategy for DynamoDB
 
 ## ⚡ Quick Start
 
@@ -707,7 +760,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### 🔗 Related Documentation
 
-- [Business Requirements](assets/REQUIREMENTS.md)
+- [Business Requirements](static/REQUIREMENTS.md)
 - [Infrastructure Setup](docs/INFRASTRUCTURE.md)
 - [OpenAPI Specification](docs/openapi.yml)
-- [Architecture Diagram](assets/diagrama.png)
+- [Architecture Diagram](static/diagrama.png)
