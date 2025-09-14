@@ -9,7 +9,6 @@
     { "path": "./libs/infrastructure" },
     { "path": "./functions/appointment" },
     { "path": "./functions/appointment-pe" },
-    { "path": "./functions/appointment-cl" },
-    { "path": "./functions/appointment-completion" }
+    { "path": "./functions/appointment-cl" }
   ]
 }
