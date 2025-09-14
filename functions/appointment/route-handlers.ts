@@ -23,9 +23,6 @@ import {
   maskInsuredId
 } from '@medical-appointment/shared';
 
-// Infrastructure layer
-import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure';
-
 // Shared utilities from functions layer
 import { 
   ApiHandlerBase, 

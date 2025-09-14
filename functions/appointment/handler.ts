@@ -8,11 +8,11 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, SQSEvent, Handler, Context
 import { Logger } from '@aws-lambda-powertools/logger';
 
 // Application layer
-import { CompleteAppointmentDto, CompleteAppointmentUseCase } from '@medical-appointment/core-use-cases';
+import { CompleteAppointmentDto, CompleteAppointmentUseCase, UseCaseFactory } from '@medical-appointment/core-use-cases';
 import { logInfrastructureError, maskInsuredId } from '@medical-appointment/shared';
 
 // Infrastructure layer
-import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure';
+import { AdapterFactory } from '@medical-appointment/infrastructure';
 
 // Shared utilities from functions layer
 import { ApiHandlerBase, RouteConfig } from '../shared/api-handler-base';
@@ -27,9 +27,24 @@ const logger = new Logger({
   logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
 });
 
-// Initialize dependencies
-const createAppointmentUseCase = InfrastructureBridgeFactory.createCreateAppointmentUseCase();
-const getAppointmentsUseCase = InfrastructureBridgeFactory.createGetAppointmentsByInsuredIdUseCase();
+// Initialize dependencies using Composition Root pattern
+const appointmentRepository = AdapterFactory.createAppointmentRepository();
+const messagingAdapter = AdapterFactory.createSNSAdapter();
+const scheduleRepository = AdapterFactory.createScheduleRepository();
+
+const createAppointmentUseCase = UseCaseFactory.createCreateAppointmentUseCase(
+  appointmentRepository,
+  messagingAdapter,
+  scheduleRepository
+);
+
+const dynamoRepository = AdapterFactory.createAppointmentRepository();
+const mysqlRepository = AdapterFactory.createMySQLAppointmentRepository();
+
+const getAppointmentsUseCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase(
+  dynamoRepository,
+  mysqlRepository
+);
 
 // Initialize route handlers
 const routeHandlers = new AppointmentRouteHandlers(
@@ -84,7 +99,13 @@ const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> 
       recordCount: event.Records.length
     });
 
-    const completeAppointmentUseCase = InfrastructureBridgeFactory.createCompleteAppointmentUseCase();
+    const appointmentRepository = AdapterFactory.createAppointmentRepository();
+    const eventBus = AdapterFactory.createEventBridgeAdapter();
+
+    const completeAppointmentUseCase = UseCaseFactory.createCompleteAppointmentUseCase(
+      appointmentRepository,
+      eventBus
+    );
 
     for (const record of event.Records) {
       try {

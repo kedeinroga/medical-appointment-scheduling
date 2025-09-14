@@ -3,11 +3,17 @@ import { Logger } from '@aws-lambda-powertools/logger';
 
 import { LambdaHandlerAdapter } from '../lambda-handler.adapter';
 import { ValidationError } from '../../../errors/aws.errors';
-import { InfrastructureBridgeFactory } from '../../../factories/infrastructure-bridge.factory';
+import { AdapterFactory } from '../../../factories/adapter.factory';
 
 // Mock dependencies
 jest.mock('@aws-lambda-powertools/logger');
-jest.mock('../../../factories/infrastructure-bridge.factory');
+jest.mock('../../../factories/adapter.factory');
+jest.mock('@medical-appointment/core-use-cases', () => ({
+  UseCaseFactory: {
+    createCreateAppointmentUseCase: jest.fn(),
+    createGetAppointmentsByInsuredIdUseCase: jest.fn()
+  }
+}));
 
 describe('LambdaHandlerAdapter', () => {
   let adapter: LambdaHandlerAdapter;

@@ -9,9 +9,19 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
   })),
 }));
 
-// Mock the infrastructure bridge factory
+// Mock the infrastructure and use case factories
 jest.mock('@medical-appointment/infrastructure', () => ({
-  InfrastructureBridgeFactory: {
+  AdapterFactory: {
+    createAppointmentRepository: jest.fn().mockReturnValue({}),
+    createSNSAdapter: jest.fn().mockReturnValue({}),
+    createScheduleRepository: jest.fn().mockReturnValue({}),
+    createMySQLAppointmentRepository: jest.fn().mockReturnValue({}),
+    createEventBridgeAdapter: jest.fn().mockReturnValue({})
+  }
+}));
+
+jest.mock('@medical-appointment/core-use-cases', () => ({
+  UseCaseFactory: {
     createCreateAppointmentUseCase: jest.fn().mockReturnValue({
       execute: jest.fn().mockResolvedValue({
         appointmentId: 'test-id',
@@ -41,7 +51,9 @@ jest.mock('@medical-appointment/infrastructure', () => ({
         status: 'completed'
       })
     })
-  }
+  },
+  CompleteAppointmentDto: jest.fn(),
+  CompleteAppointmentUseCase: jest.fn()
 }));
 
 // Import after mocking

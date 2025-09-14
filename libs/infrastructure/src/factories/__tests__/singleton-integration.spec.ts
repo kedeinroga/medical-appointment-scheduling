@@ -180,7 +180,6 @@ describe('Singleton Integration Test - Cross-Layer Verification', () => {
 
   describe('Cross-layer dependency verification', () => {
     it('should work correctly when factories create adapters for use cases', () => {
-      // Simulate what happens in InfrastructureBridgeFactory
       const appointmentRepo = AdapterFactory.createAppointmentRepository();
       const snsAdapter = AdapterFactory.createSNSAdapter();
       const scheduleRepo = AdapterFactory.createScheduleRepository();

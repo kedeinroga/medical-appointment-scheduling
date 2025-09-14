@@ -3,11 +3,11 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, Context, SQSEvent } from '
 import { Logger } from '@aws-lambda-powertools/logger';
 
 // Use Cases imports  
-import { CreateAppointmentDto, GetAppointmentsDto } from '@medical-appointment/core-use-cases';
+import { CreateAppointmentDto, GetAppointmentsDto, UseCaseFactory } from '@medical-appointment/core-use-cases';
 
 // Infrastructure imports
 import { ValidationError } from '../../errors/aws.errors';
-import { InfrastructureBridgeFactory } from '../../factories/infrastructure-bridge.factory';
+import { AdapterFactory } from '../../factories/adapter.factory';
 
 /**
  * Lambda Handler Adapter for API Gateway and SQS events
@@ -120,7 +120,16 @@ export class LambdaHandlerAdapter {
         scheduleId: requestData.scheduleId
       };
 
-      const useCase = InfrastructureBridgeFactory.createCreateAppointmentUseCase();
+      // Create dependencies using Composition Root pattern
+      const appointmentRepository = AdapterFactory.createAppointmentRepository();
+      const messagingAdapter = AdapterFactory.createSNSAdapter();
+      const scheduleRepository = AdapterFactory.createScheduleRepository();
+
+      const useCase = UseCaseFactory.createCreateAppointmentUseCase(
+        appointmentRepository,
+        messagingAdapter,
+        scheduleRepository
+      );
       const result = await useCase.execute(dto);
 
       this.logger.info('Appointment created successfully', {
@@ -167,7 +176,14 @@ export class LambdaHandlerAdapter {
         insuredId
       };
 
-      const useCase = InfrastructureBridgeFactory.createGetAppointmentsByInsuredIdUseCase();
+      // Create dependencies using Composition Root pattern
+      const dynamoRepository = AdapterFactory.createAppointmentRepository();
+      const mysqlRepository = AdapterFactory.createMySQLAppointmentRepository();
+
+      const useCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase(
+        dynamoRepository,
+        mysqlRepository
+      );
       const result = await useCase.execute(dto);
 
       this.logger.info('Appointments retrieved successfully', {

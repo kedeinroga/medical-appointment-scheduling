@@ -9,7 +9,7 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
   })),
 }));
 
-// Mock the infrastructure bridge factory
+// Mock the infrastructure factories
 const mockProcessAppointmentUseCase = {
   execute: jest.fn().mockResolvedValue({
     appointmentId: 'test-id',
@@ -18,7 +18,17 @@ const mockProcessAppointmentUseCase = {
 };
 
 jest.mock('@medical-appointment/infrastructure', () => ({
-  InfrastructureBridgeFactory: {
+  CountryProcessingFactory: {
+    createCountryProcessingAdapters: jest.fn().mockReturnValue({
+      appointmentRepository: {},
+      eventBridgeAdapter: {},
+      scheduleRepository: {}
+    })
+  }
+}));
+
+jest.mock('@medical-appointment/core-use-cases', () => ({
+  CountryProcessingCompositionFactory: {
     createProcessCountryAppointmentUseCase: jest.fn().mockReturnValue(mockProcessAppointmentUseCase)
   }
 }));

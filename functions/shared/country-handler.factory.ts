@@ -6,8 +6,11 @@
 
 import { Logger } from '@aws-lambda-powertools/logger';
 
-// Infrastructure Bridge (this is allowed from Functions layer)
-import { InfrastructureBridgeFactory } from '@medical-appointment/infrastructure';
+// Application layer  
+import { CountryProcessingCompositionFactory } from '@medical-appointment/core-use-cases';
+
+// Infrastructure layer
+import { CountryProcessingFactory } from '@medical-appointment/infrastructure';
 
 // Domain layer
 import { CountryISO } from '@medical-appointment/core-domain';
@@ -41,10 +44,16 @@ export class CountryHandlerFactory {
       logLevel: (process.env.LOG_LEVEL as any) || 'INFO'
     });
 
-    // Create use case through infrastructure bridge
+    // Create use case through Composition Root pattern
     const countryISO = CountryISO.fromString(config.countryCode);
-    const processAppointmentUseCase = InfrastructureBridgeFactory
-      .createProcessCountryAppointmentUseCase(countryISO);
+    const countryAdapters = CountryProcessingFactory.createCountryProcessingAdapters(countryISO);
+
+    const processAppointmentUseCase = CountryProcessingCompositionFactory.createProcessCountryAppointmentUseCase(
+      countryAdapters.appointmentRepository,
+      countryAdapters.eventBridgeAdapter,
+      countryAdapters.scheduleRepository,
+      countryISO
+    );
 
     // Create dependencies object
     const dependencies: CountryHandlerDependencies = {
