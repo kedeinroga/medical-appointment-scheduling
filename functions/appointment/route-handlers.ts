@@ -1,6 +1,8 @@
 /**
- * Appointment Route Handlers - Refactored with DRY principles
- * Extracted specific route logic from main handler
+ * Enhanced Appointment Route Handlers - WITH ROBUST VALIDATION
+ * 
+ * MIGRACIÓN COMPLETA del archivo route-handlers.ts original
+ * con validación robusta implementada
  */
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
@@ -15,21 +17,29 @@ import {
   CompleteAppointmentDto,
   CompleteAppointmentUseCase 
 } from '@medical-appointment/core-use-cases';
+
+// Robust validation system
+import { 
+  HTTPValidator,
+  CreateAppointmentBodySchema,
+  GetAppointmentsPathSchema,
+  GetAppointmentsQuerySchema,
+  ValidationResult
+} from '@medical-appointment/shared';
+
+// Infrastructure errors and utilities
 import { 
   AppointmentNotFoundError, 
-  ValidationError,
   logBusinessError, 
   logInfrastructureError,
   maskInsuredId
 } from '@medical-appointment/shared';
 
-// Shared utilities from functions layer
+// Shared utilities from functions layer (keeping existing commons)
 import { 
   ApiHandlerBase, 
   HTTP_STATUS, 
-  ERROR_CODES,
-  SUPPORTED_COUNTRIES,
-  INSURED_ID_PATTERN
+  ERROR_CODES
 } from '../shared/api-handler-base';
 
 // Same layer modules
@@ -37,15 +47,22 @@ import {
   APPOINTMENT_API,
   LOG_EVENTS
 } from './constants';
-import { 
+import {
   logAppointmentCreation,
   logAppointmentGet
 } from './utils';
 
 /**
- * Appointment Route Handlers
+ * Appointment Route Handlers with Robust Validation
+ *
+ * MEJORAS IMPLEMENTADAS:
+ * - Validación robusta con Zod schemas
+ * - Tipado fuerte automático
+ * - Transformaciones automáticas de datos
+ * - Mensajes de error mejorados
+ * - Filtros y paginación robustos
  */
-export class AppointmentRouteHandlers {
+export class EnhancedAppointmentRouteHandlers {
   constructor(
     private logger: Logger,
     private createAppointmentUseCase: CreateAppointmentUseCase,
@@ -53,7 +70,7 @@ export class AppointmentRouteHandlers {
   ) {}
 
   /**
-   * Handle POST /appointments - Create new appointment
+   * Handle POST /appointments - Create new appointment WITH ROBUST VALIDATION
    */
   async handleCreateAppointment(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
     const requestId = event.requestContext?.requestId || 'unknown';
@@ -65,47 +82,28 @@ export class AppointmentRouteHandlers {
         operationType: 'create'
       });
 
-      // Validate request body using commons
-      const bodyValidation = ApiHandlerBase.validateJsonBody(event);
+      // ROBUST VALIDATION - Replaces all manual validation
+      const bodyValidation = HTTPValidator.validateBody(event, CreateAppointmentBodySchema);
       if (!bodyValidation.isValid) {
-        return this.createErrorResponse(
-          bodyValidation.error!.statusCode,
-          bodyValidation.error!.message,
-          bodyValidation.error!.errorCode
-        );
+        this.logger.warn('Create appointment validation failed', {
+          requestId,
+          errors: bodyValidation.errors,
+          errorCount: bodyValidation.errors?.length || 0
+        });
+        return this.createValidationErrorResponse(bodyValidation);
       }
 
-      const requestBody = bodyValidation.data;
+      // TYPED DATA - requestBody is now strongly typed and validated
+      const requestBody = bodyValidation.data!;
+      // - requestBody.countryISO: 'PE' | 'CL' (guaranteed)
+      // - requestBody.insuredId: string (exactly 5 digits, auto-padded)
+      // - requestBody.scheduleId: number (positive integer, guaranteed)
 
-      // Validate required fields using commons
-      const fieldsValidation = ApiHandlerBase.validateRequiredFields(
-        requestBody, 
-        ['countryISO', 'insuredId', 'scheduleId']
-      );
-      if (!fieldsValidation.isValid) {
-        return this.createErrorResponse(
-          fieldsValidation.error!.statusCode,
-          fieldsValidation.error!.message,
-          fieldsValidation.error!.errorCode
-        );
-      }
-
-      const { countryISO, insuredId, scheduleId } = requestBody;
-
-      // Validate countryISO
-      if (!SUPPORTED_COUNTRIES.includes(countryISO)) {
-        return this.createErrorResponse(
-          HTTP_STATUS.BAD_REQUEST, 
-          'Invalid countryISO. Must be PE or CL', 
-          ERROR_CODES.INVALID_COUNTRY_ISO
-        );
-      }
-
-      // Create DTO
+      // NO MANUAL TRANSFORMATIONS NEEDED - Already done by schema
       const createAppointmentDto: CreateAppointmentDto = {
-        countryISO: countryISO as 'PE' | 'CL',
-        insuredId: String(insuredId).padStart(5, '0'),
-        scheduleId: Number(scheduleId)
+        countryISO: requestBody.countryISO,  // Already validated as 'PE' | 'CL'
+        insuredId: requestBody.insuredId,     // Already padded to 5 digits
+        scheduleId: requestBody.scheduleId    // Already validated as positive number
       };
 
       // Log appointment creation with masked PII
@@ -139,7 +137,7 @@ export class AppointmentRouteHandlers {
   }
 
   /**
-   * Handle GET /appointments/{insuredId} - Get appointments by insured ID
+   * Handle GET /appointments/{insuredId} - Get appointments WITH ROBUST VALIDATION
    */
   async handleGetAppointments(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
     const requestId = event.requestContext?.requestId || 'unknown';
@@ -151,52 +149,111 @@ export class AppointmentRouteHandlers {
         operationType: 'get'
       });
 
-      // Get insuredId from path parameters
-      const insuredId = event.pathParameters?.insuredId;
-      
-      if (!insuredId) {
-        return this.createErrorResponse(
-          HTTP_STATUS.BAD_REQUEST, 
-          'Missing insuredId in path parameters', 
-          ERROR_CODES.MISSING_INSURED_ID
-        );
+      // ROBUST VALIDATION - Path parameters
+      const pathValidation = HTTPValidator.validatePathParams(event, GetAppointmentsPathSchema);
+      if (!pathValidation.isValid) {
+        this.logger.warn('Get appointments path validation failed', {
+          requestId,
+          errors: pathValidation.errors
+        });
+        return this.createValidationErrorResponse(pathValidation);
       }
 
-      // Validate insuredId format
-      const insuredIdPadded = String(insuredId).padStart(5, '0');
-      if (!INSURED_ID_PATTERN.test(insuredIdPadded)) {
-        return this.createErrorResponse(
-          HTTP_STATUS.BAD_REQUEST, 
-          'Invalid insuredId format. Must be 5 digits', 
-          ERROR_CODES.INVALID_INSURED_ID_FORMAT
-        );
+      // ROBUST VALIDATION - Query parameters (optional but validated when present)
+      const queryValidation = HTTPValidator.validateQueryParams(event, GetAppointmentsQuerySchema);
+      if (!queryValidation.isValid) {
+        this.logger.warn('Get appointments query validation failed', {
+          requestId,
+          errors: queryValidation.errors
+        });
+        return this.createValidationErrorResponse(queryValidation);
       }
+
+      // TYPED DATA - Auto-validated and with defaults applied
+      const pathParams = pathValidation.data!;
+      const queryParams = queryValidation.data!;
+      
+      // pathParams.insuredId is guaranteed to be exactly 5 digits (auto-padded)
+      // queryParams have defaults applied: limit=20, offset=0
 
       // Log appointment get with masked PII
       logAppointmentGet(this.logger, {
         requestId,
-        insuredId: insuredIdPadded
+        insuredId: pathParams.insuredId
       });
 
-      // Create DTO
+      // Create DTO for use case
       const getAppointmentsDto: GetAppointmentsDto = {
-        insuredId: insuredIdPadded
+        insuredId: pathParams.insuredId
       };
 
       // Execute use case
       const result = await this.getAppointmentsUseCase.execute(getAppointmentsDto);
 
+      // APPLY ROBUST FILTERS - Using validated query parameters
+      let filteredAppointments = result.appointments;
+
+      // Status filter (validated enum)
+      if (queryParams.status) {
+        filteredAppointments = filteredAppointments.filter(
+          appointment => appointment.status === queryParams.status
+        );
+      }
+
+      // Date range filters (validated ISO datetime strings)
+      if (queryParams.startDate) {
+        const startDate = new Date(queryParams.startDate);
+        filteredAppointments = filteredAppointments.filter(
+          appointment => new Date(appointment.createdAt) >= startDate
+        );
+      }
+
+      if (queryParams.endDate) {
+        const endDate = new Date(queryParams.endDate);
+        filteredAppointments = filteredAppointments.filter(
+          appointment => new Date(appointment.createdAt) <= endDate
+        );
+      }
+
+      // ROBUST PAGINATION - Using validated parameters with guaranteed defaults
+      const limit = queryParams.limit ?? 20;  // guaranteed to be 1-100, default 20
+      const offset = queryParams.offset ?? 0; // guaranteed to be >=0, default 0
+      const paginatedAppointments = filteredAppointments.slice(offset, offset + limit);
+
       this.logger.info('Appointments retrieved successfully', {
         logId: 'appointments-retrieved-success',
         requestId,
-        insuredId: maskInsuredId(insuredIdPadded),
-        appointmentCount: result.appointments.length
+        insuredId: maskInsuredId(pathParams.insuredId),
+        appointmentCount: paginatedAppointments.length,
+        totalCount: filteredAppointments.length,
+        appliedFilters: {
+          status: queryParams.status || null,
+          dateRange: [queryParams.startDate, queryParams.endDate].filter(Boolean),
+          pagination: { limit, offset }
+        }
       });
 
+      // ENHANCED RESPONSE with comprehensive pagination and filters info
       return this.createSuccessResponse(HTTP_STATUS.OK, {
-        appointments: result.appointments,
+        appointments: paginatedAppointments,
         pagination: {
-          count: result.appointments.length
+          count: paginatedAppointments.length,
+          total: filteredAppointments.length,
+          limit,
+          offset,
+          hasMore: offset + limit < filteredAppointments.length,
+          totalPages: Math.ceil(filteredAppointments.length / limit),
+          currentPage: Math.floor(offset / limit) + 1
+        },
+        filters: {
+          status: queryParams.status || null,
+          startDate: queryParams.startDate || null,
+          endDate: queryParams.endDate || null
+        },
+        meta: {
+          totalAvailable: result.appointments.length,
+          totalFiltered: filteredAppointments.length,
+          filterApplied: !!(queryParams.status || queryParams.startDate || queryParams.endDate)
         }
       });
 
@@ -206,7 +263,46 @@ export class AppointmentRouteHandlers {
   }
 
   /**
-   * Handle errors consistently
+   * NEW: Create structured validation error response
+   */
+  private createValidationErrorResponse(validationResult: ValidationResult): APIGatewayProxyResult {
+    const errors = validationResult.errors || [];
+    
+    // Group errors by field for better UX
+    const fieldErrors = errors.reduce((acc, error) => {
+      if (!acc[error.field]) {
+        acc[error.field] = [];
+      }
+      acc[error.field]!.push({
+        message: error.message,
+        code: error.code
+      });
+      return acc;
+    }, {} as Record<string, Array<{ message: string; code: string }>>);
+
+    return {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        error: {
+          message: 'Validation failed',
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+          fields: fieldErrors,
+          details: {
+            errorCount: errors.length,
+            firstError: errors[0]?.message || 'Unknown validation error',
+            timestamp: new Date().toISOString()
+          }
+        }
+      })
+    };
+  }
+
+  /**
+   * ENHANCED: Error handling with better categorization
    */
   private handleError(error: Error, requestId: string, operationType: string): APIGatewayProxyResult {
     const logEvent = operationType === 'create' 
@@ -217,10 +313,12 @@ export class AppointmentRouteHandlers {
       logId: logEvent.logId,
       requestId,
       errorType: error.constructor.name,
-      errorMessage: error.message
+      errorMessage: error.message,
+      stackTrace: error.stack
     });
 
-    if (error instanceof ValidationError) {
+    // Business logic errors
+    if (error.constructor.name === 'ValidationError') {
       logBusinessError(this.logger, error, { requestId, operationType });
       return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
     }
@@ -229,12 +327,13 @@ export class AppointmentRouteHandlers {
       return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
     }
 
+    // Infrastructure errors
     logInfrastructureError(this.logger, error, { requestId, operationType });
     return this.createErrorResponse(HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Internal server error', ERROR_CODES.INTERNAL_ERROR);
   }
 
   /**
-   * Helper methods using commons
+   * Helper methods using existing commons
    */
   private createSuccessResponse(statusCode: number, data: any): APIGatewayProxyResult {
     return new ApiHandlerBase([], this.logger).createSuccessResponse(statusCode, data);
@@ -244,3 +343,9 @@ export class AppointmentRouteHandlers {
     return new ApiHandlerBase([], this.logger).createErrorResponse(statusCode, message, errorCode);
   }
 }
+
+/**
+ * MIGRATION HELPER: Backward compatible export
+ * Permite usar la nueva clase con el mismo nombre que antes
+ */
+export const AppointmentRouteHandlers = EnhancedAppointmentRouteHandlers;
