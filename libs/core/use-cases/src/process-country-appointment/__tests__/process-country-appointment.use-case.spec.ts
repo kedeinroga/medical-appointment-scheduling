@@ -137,7 +137,7 @@ describe(ProcessCountryAppointmentUseCase.name, () => {
         scheduleId: 100
       };
 
-      mockScheduleRepository.findByScheduleId.mockResolvedValue(null);
+      mockScheduleRepository.findByScheduleId.mockRejectedValue(new Error('Schedule with ID 100 not found for country PE'));
 
       // Act & Assert
       await expect(processCountryAppointmentUseCase.execute(dto)).rejects.toThrow('Schedule with ID 100 not found for country PE');

@@ -41,7 +41,7 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
 
     const schedule = Schedule.create({
       centerId: 1,
-      date: new Date('2025-12-01T10:00:00Z'),
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       medicId: 1,
       scheduleId,
       specialtyId: 1
@@ -81,8 +81,8 @@ describe(GetAppointmentsByInsuredIdUseCase.name, () => {
       expect(result.appointments).toHaveLength(2);
       
       // Find appointments by scheduleId since order is not guaranteed
-      const processedAppointment = result.appointments.find(apt => apt.scheduleId === 200);
-      const pendingAppointment = result.appointments.find(apt => apt.scheduleId === 100);
+      const processedAppointment = result.appointments.find(apt => apt.schedule?.scheduleId === 200);
+      const pendingAppointment = result.appointments.find(apt => apt.schedule?.scheduleId === 100);
 
       expect(processedAppointment).toBeDefined();
       expect(processedAppointment!.insuredId).toBe('12345');

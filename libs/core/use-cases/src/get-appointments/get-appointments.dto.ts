@@ -8,10 +8,10 @@ export interface AppointmentSummaryDto {
   createdAt: string;
   insuredId: string;
   processedAt?: string | null;
-  scheduleId: number;
   status: string;
   updatedAt: string;
   schedule?: {
+    scheduleId?: number;
     centerId?: number;
     specialtyId?: number;
     medicId?: number;

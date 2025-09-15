@@ -81,7 +81,7 @@ describe(MySQLScheduleRepository.name, () => {
         centerId: 100,
         specialtyId: 200,
         medicId: 300,
-        date: new Date('2025-09-15T10:00:00Z')
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       });
 
       mockConnection.execute.mockResolvedValue([]);
@@ -91,7 +91,7 @@ describe(MySQLScheduleRepository.name, () => {
       expect(mockPool.getConnection).toHaveBeenCalled();
       expect(mockConnection.execute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO schedules'),
-        [100, 200, 300, '2025-09-15T10:00:00.000Z', true, 'PE']
+        [100, 200, 300, expect.any(String), true, 'PE']
       );
       expect(mockConnection.release).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -109,7 +109,7 @@ describe(MySQLScheduleRepository.name, () => {
         centerId: 100,
         specialtyId: 200,
         medicId: 300,
-        date: new Date('2025-09-15T10:00:00Z')
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       });
 
       const dbError = new Error('Connection failed');
@@ -134,7 +134,7 @@ describe(MySQLScheduleRepository.name, () => {
         centerId: 100,
         specialtyId: 200,
         medicId: 300,
-        date: new Date('2025-09-15T10:00:00Z')
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       });
 
       mockConnection.execute.mockRejectedValue(new Error('Database error'));
@@ -151,7 +151,7 @@ describe(MySQLScheduleRepository.name, () => {
         centerId: 100,
         specialtyId: 200,
         medicId: 300,
-        date: new Date('2025-09-15T10:00:00Z')
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       });
 
       mockPool.getConnection.mockResolvedValue(null);
@@ -167,7 +167,7 @@ describe(MySQLScheduleRepository.name, () => {
         center_id: 100,
         specialty_id: 200,
         medic_id: 300,
-        available_date: '2025-09-15T10:00:00Z',
+        available_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         schedule_id: 1
       };
 
@@ -194,12 +194,12 @@ describe(MySQLScheduleRepository.name, () => {
       );
     });
 
-    it('should return null when schedule not found', async () => {
+    it('should throw error when schedule not found', async () => {
       mockConnection.execute.mockResolvedValue([[]]);
 
-      const result = await repository.findByScheduleId(1, CountryISO.PERU);
+      await expect(repository.findByScheduleId(1, CountryISO.PERU))
+        .rejects.toThrow('Schedule with ID 1 not found');
 
-      expect(result).toBeNull();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Schedule not found in MySQL',
         {
@@ -243,14 +243,14 @@ describe(MySQLScheduleRepository.name, () => {
           center_id: 100,
           specialty_id: 200,
           medic_id: 300,
-          available_date: '2025-09-15T10:00:00Z',
+          available_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           schedule_id: 1
         },
         {
           center_id: 101,
           specialty_id: 201,
           medic_id: 301,
-          available_date: '2025-09-16T10:00:00Z',
+          available_date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
           schedule_id: 2
         }
       ];
@@ -283,7 +283,7 @@ describe(MySQLScheduleRepository.name, () => {
           center_id: 100,
           specialty_id: 200,
           medic_id: 300,
-          available_date: '2025-09-15T10:00:00Z',
+          available_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           schedule_id: 1
         }
       ];
@@ -340,7 +340,7 @@ describe(MySQLScheduleRepository.name, () => {
         centerId: 100,
         specialtyId: 200,
         medicId: 300,
-        date: new Date('2025-09-15T10:00:00Z')
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       });
 
       mockConnection.execute.mockRejectedValue('Unknown error type');

@@ -12,7 +12,7 @@ import {
 
 // Infrastructure imports
 import { AWS_CONFIG } from '../../config/aws.config';
-import { DatabaseConnectionError } from '../../errors/aws.errors';
+import { AppointmentNotFoundError, DatabaseConnectionError } from '../../errors/aws.errors';
 
 // Shared imports
 import { Singleton } from '@medical-appointment/shared';
@@ -104,7 +104,7 @@ export class MySQLAppointmentRepository implements IAppointmentRepository {
     }
   }
 
-  async findByAppointmentId(appointmentId: AppointmentId): Promise<Appointment | null> {
+  async findByAppointmentId(appointmentId: AppointmentId): Promise<Appointment> {
     let connection: PoolConnection | null = null;
     
     try {
@@ -151,7 +151,7 @@ export class MySQLAppointmentRepository implements IAppointmentRepository {
       this.logger.info('Appointment not found in MySQL', {
         appointmentId: appointmentId.getValue()
       });
-      return null;
+      throw new AppointmentNotFoundError(appointmentId.getValue());
 
     } catch (error) {
       this.logger.error('Failed to find appointment in MySQL', {

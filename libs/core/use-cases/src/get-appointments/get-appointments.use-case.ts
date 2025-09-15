@@ -61,12 +61,12 @@ export class GetAppointmentsByInsuredIdUseCase {
           insuredId: appointment.getInsuredId().getValue(),
           processedAt: appointment.getProcessedAt()?.toISOString() || null,
           schedule: schedule ? {
+            scheduleId: schedule.getScheduleId(),
             centerId: schedule.getCenterId(),
             date: schedule.getDate().toISOString(),
             medicId: schedule.getMedicId(),
             specialtyId: schedule.getSpecialtyId()
           } : undefined,
-          scheduleId: appointment.getScheduleId(),
           status: appointment.getStatus().getValue(),
           updatedAt: appointment.getUpdatedAt().toISOString()
         };

@@ -9,9 +9,16 @@ export class MySQLScheduleRepository implements IScheduleRepository {
     // Mock constructor - no real database connection
   }
 
-  async findByScheduleId(scheduleId: number, countryISO: CountryISO): Promise<Schedule | null> {
-    // Mock implementation - return null for tests
-    return Promise.resolve(null);
+  async findByScheduleId(scheduleId: number, countryISO: CountryISO): Promise<Schedule> {
+    // Mock implementation - return a dummy schedule for tests
+    // Use a public factory method or static method to create Schedule
+    return Promise.resolve(Schedule.create({
+      scheduleId: scheduleId,
+      date: new Date(),
+      centerId: 1,
+      medicId: 1,
+      specialtyId: 1
+    }));
   }
 
   async findAvailableSchedules(countryISO: CountryISO, date?: Date): Promise<Schedule[]> {

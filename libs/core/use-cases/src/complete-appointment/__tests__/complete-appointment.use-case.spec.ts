@@ -68,7 +68,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId,
         countryISO: 'PE',
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -100,7 +101,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId,
         countryISO: 'CL',
         insuredId: '67890',
-        scheduleId: 200
+        scheduleId: 200,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -123,10 +125,13 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: '550e8400-e29b-41d4-a716-446655440000', // Valid UUID
         countryISO: 'PE',
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
-      mockAppointmentRepository.findByAppointmentId.mockResolvedValue(null);
+      mockAppointmentRepository.findByAppointmentId.mockRejectedValue(
+        new Error('Appointment with ID 550e8400-e29b-41d4-a716-446655440000 not found')
+      );
 
       // Act & Assert
       await expect(completeAppointmentUseCase.execute(dto)).rejects.toThrow(
@@ -142,7 +147,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: appointment.getAppointmentId().getValue(),
         countryISO: 'PE',
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -162,7 +168,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: appointment.getAppointmentId().getValue(),
         countryISO: 'PE',
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -181,7 +188,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: appointment.getAppointmentId().getValue(),
         countryISO: 'CL', // Different from appointment country (PE)
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -200,7 +208,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: appointment.getAppointmentId().getValue(),
         countryISO: 'US', // Invalid country
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -219,7 +228,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: appointment.getAppointmentId().getValue(),
         countryISO: 'PE',
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);
@@ -237,7 +247,8 @@ describe(CompleteAppointmentUseCase.name, () => {
         appointmentId: appointment.getAppointmentId().getValue(),
         countryISO: 'PE',
         insuredId: '12345',
-        scheduleId: 100
+        scheduleId: 100,
+        status: 'processed'
       };
 
       mockAppointmentRepository.findByAppointmentId.mockResolvedValue(appointment);

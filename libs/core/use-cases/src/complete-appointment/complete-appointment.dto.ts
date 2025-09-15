@@ -3,6 +3,7 @@ export interface CompleteAppointmentDto {
   countryISO: string;
   insuredId: string;
   scheduleId: number;
+  status?: string; // Optional, used for validation in handler
 }
 
 export interface CompleteAppointmentResponseDto {

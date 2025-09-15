@@ -168,15 +168,15 @@ describe('DynamoDBAppointmentRepository - Comprehensive Coverage', () => {
       );
     });
 
-    it('should return null when appointment not found', async () => {
+    it('should throw error when appointment not found', async () => {
       const appointmentId = createMockAppointmentId();
       (mockDynamoClient.send as jest.Mock).mockResolvedValue({
         Item: undefined
       });
 
-      const result = await repository.findByAppointmentId(appointmentId as any);
+      await expect(repository.findByAppointmentId(appointmentId as any))
+        .rejects.toThrow('Appointment with ID test-appointment-id not found');
 
-      expect(result).toBeNull();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Appointment not found',
         expect.objectContaining({

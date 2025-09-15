@@ -5,7 +5,6 @@ import {
   IAppointmentRepository,
   IEventBus,
   IScheduleRepository,
-  Insured,
   InsuredId
 } from '@medical-appointment/core-domain';
 import { Logger } from '@aws-lambda-powertools/logger';
@@ -39,15 +38,6 @@ export class ProcessCountryAppointmentUseCase {
 
       // Get schedule from repository
       const schedule = await this.scheduleRepository.findByScheduleId(dto.scheduleId, countryISO);
-      if (!schedule) {
-        throw new Error(`Schedule with ID ${dto.scheduleId} not found for country ${dto.countryISO}`);
-      }
-
-      // Create insured entity
-      const insured = Insured.create({
-        countryISO,
-        insuredId
-      });
 
       // Create appointment entity for MySQL storage (country-specific)
       const countryAppointment = Appointment.fromPrimitives({
