@@ -44,9 +44,6 @@ export class CreateAppointmentUseCase {
 
       // Get schedule from repository
       const schedule = await this.scheduleRepository.findByScheduleId(dto.scheduleId, countryISO);
-      if (!schedule) {
-        throw new Error(`Schedule with ID ${dto.scheduleId} not found for country ${dto.countryISO}`);
-      }
 
       // Create appointment entity
       const appointment = Appointment.create({

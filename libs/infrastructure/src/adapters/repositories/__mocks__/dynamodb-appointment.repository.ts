@@ -14,9 +14,9 @@ export class DynamoDBAppointmentRepository implements IAppointmentRepository {
     return Promise.resolve();
   }
 
-  async findByAppointmentId(appointmentId: AppointmentId): Promise<Appointment | null> {
-    // Mock implementation - return null for tests
-    return Promise.resolve(null);
+  async findByAppointmentId(appointmentId: AppointmentId): Promise<Appointment> {
+    // Mock implementation - throw error for tests to indicate not found
+    throw new Error('Appointment not found');
   }
 
   async findByInsuredId(insuredId: InsuredId): Promise<Appointment[]> {

@@ -8,7 +8,6 @@ import {
   Appointment,
   AppointmentId,
   AppointmentStatus,
-  CountryISO,
   IAppointmentRepository,
   InsuredId
 } from '@medical-appointment/core-domain';
@@ -68,7 +67,7 @@ export class DynamoDBAppointmentRepository implements IAppointmentRepository {
     }
   }
 
-  async findByAppointmentId(appointmentId: AppointmentId): Promise<Appointment | null> {
+  async findByAppointmentId(appointmentId: AppointmentId): Promise<Appointment> {
     try {
       const result = await this.dynamoClient.send(new GetCommand({
         TableName: this.tableName,
@@ -81,7 +80,7 @@ export class DynamoDBAppointmentRepository implements IAppointmentRepository {
         this.logger.info('Appointment not found', {
           appointmentId: appointmentId.getValue()
         });
-        return null;
+        throw new AppointmentNotFoundError(appointmentId.getValue());
       }
 
       const appointment = this.mapFromStorageFormat(result.Item);

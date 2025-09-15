@@ -9,6 +9,16 @@ export class AppointmentNotFoundError extends Error {
 }
 
 /**
+ * Custom error for schedule not found
+ */
+export class ScheduleNotFoundError extends Error {
+  constructor(scheduleId: string) {
+    super(`Schedule with ID ${scheduleId} not found`);
+    this.name = 'ScheduleNotFoundError';
+  }
+}
+
+/**
  * Custom error for invalid country ISO
  */
 export class InvalidCountryISOError extends Error {

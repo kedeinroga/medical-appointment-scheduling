@@ -31,13 +31,18 @@ export class CompleteAppointmentUseCase {
     });
 
     try {
+      // Validate that status is PROCESSED
+      if (dto.status?.toLowerCase() !== 'processed') {
+        logger.info('Skipping appointment completion - status not PROCESSED', {
+          appointmentId: dto.appointmentId,
+          currentStatus: dto.status,
+          expectedStatus: 'PROCESSED'
+        });
+        throw new Error(`Appointment status is not PROCESSED. Current status: ${dto.status}`);
+      }
       // Validate and get appointment
       const appointmentId = AppointmentId.fromString(dto.appointmentId);
       const appointment = await this.appointmentRepository.findByAppointmentId(appointmentId);
-      
-      if (!appointment) {
-        throw new Error(`Appointment with ID ${dto.appointmentId} not found`);
-      }
 
       // Validate appointment is in pending status (ready to be completed)
       if (!appointment.isPending()) {

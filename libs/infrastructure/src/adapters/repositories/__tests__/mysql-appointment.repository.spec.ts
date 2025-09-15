@@ -238,14 +238,14 @@ describe('MySQLAppointmentRepository', () => {
       });
     });
 
-    it('should return null if appointment not found', async () => {
+    it('should throw error when appointment not found', async () => {
       mockConnection.execute
         .mockResolvedValueOnce([[] as any, []]) // First table empty
         .mockResolvedValueOnce([[] as any, []]); // Second table empty
 
-      const result = await repository.findByAppointmentId(appointmentId);
+      await expect(repository.findByAppointmentId(appointmentId))
+        .rejects.toThrow('Appointment with ID apt-123 not found');
 
-      expect(result).toBeNull();
       expect(mockLogger.info).toHaveBeenCalledWith('Appointment not found in MySQL', {
         appointmentId: 'apt-123'
       });

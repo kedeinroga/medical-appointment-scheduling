@@ -22,6 +22,15 @@ export class AppointmentNotFoundError extends BusinessException {
 }
 
 /**
+ * Exception thrown when a schedule is not found
+ */
+export class ScheduleNotFoundError extends BusinessException {
+  constructor(scheduleId: string) {
+    super(`Schedule with ID ${scheduleId} not found`, 'ScheduleNotFoundError');
+  }
+}
+
+/**
  * Exception thrown when a country is not supported
  */
 export class UnsupportedCountryError extends BusinessException {

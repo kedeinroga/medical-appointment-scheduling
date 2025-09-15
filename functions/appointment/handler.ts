@@ -9,7 +9,10 @@ import { APIGatewayProxyEvent, SQSEvent, Handler, Context } from 'aws-lambda';
 import { Logger } from '@aws-lambda-powertools/logger';
 
 // Application layer
-import { CompleteAppointmentDto, UseCaseFactory } from '@medical-appointment/core-use-cases';
+import { 
+  CompleteAppointmentDto,
+  UseCaseFactory 
+} from '@medical-appointment/core-use-cases';
 import { maskInsuredId } from '@medical-appointment/shared';
 
 // Infrastructure layer
@@ -45,6 +48,15 @@ const mysqlRepository = AdapterFactory.createMySQLAppointmentRepository();
 const getAppointmentsUseCase = UseCaseFactory.createGetAppointmentsByInsuredIdUseCase(
   dynamoRepository,
   mysqlRepository
+);
+
+// Initialize completion use case for SQS events
+const completionEventRepository = AdapterFactory.createAppointmentRepository();
+const completionEventBus = AdapterFactory.createEventBridgeAdapter();
+
+const completeAppointmentUseCase = UseCaseFactory.createCompleteAppointmentUseCase(
+  completionEventRepository,
+  completionEventBus
 );
 
 // Initialize enhanced route handlers with validation (using DRY principle)
@@ -86,7 +98,8 @@ export const main: Handler = async (event: any, context: Context): Promise<any> 
 };
 
 /**
- * Handle SQS completion events
+ * Handle SQS completion events - Clean Architecture compliant
+ * Now only handles presentation logic, business logic moved to use case
  */
 const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> => {
   const requestId = context.awsRequestId;
@@ -98,79 +111,64 @@ const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> 
       recordCount: event.Records.length
     });
 
-    const appointmentRepository = AdapterFactory.createAppointmentRepository();
-    const eventBus = AdapterFactory.createEventBridgeAdapter();
+    let totalProcessed = 0;
+    let totalSkipped = 0;
 
-    const completeAppointmentUseCase = UseCaseFactory.createCompleteAppointmentUseCase(
-      appointmentRepository,
-      eventBus
-    );
-
+    // Process each SQS record
     for (const record of event.Records) {
       try {
-        // Parse the SQS record body
-        const eventData = JSON.parse(record.body);
-
-        //TODO: Move this conditional to the use case
-        // await completeAppointmentUseCase.execute(eventData);
-
-        // Handle EventBridge format (with detail wrapper)
-        let actualData = eventData;
-        if (eventData.detail && eventData['detail-type']) {
-          actualData = eventData.detail;
-        }
-
-        // Validate required fields
-        if (!actualData.appointmentId || !actualData.insuredId || !actualData.countryISO || !actualData.scheduleId) {
-          logger.warn('Skipping message - missing required fields', {
-            messageId: record.messageId,
-            missingFields: {
-              appointmentId: !actualData.appointmentId,
-              insuredId: !actualData.insuredId,
-              countryISO: !actualData.countryISO,
-              scheduleId: !actualData.scheduleId
-            }
+        // Parse and validate the event data (helper function for cleaner code)
+        const completionData = parseAndValidateCompletionEvent(record.body, record.messageId);
+        
+        if (!completionData) {
+          logger.info('Skipping invalid completion event', {
+            messageId: record.messageId
           });
+          totalSkipped++;
           continue;
         }
 
-        // Validate that status is PROCESSED
-        if (actualData.status?.toLowerCase() !== 'processed') {
-          logger.info('Skipping event - status not PROCESSED', {
-            appointmentId: actualData.appointmentId,
-            currentStatus: actualData.status,
-            expectedStatus: 'PROCESSED'
-          });
-          continue;
-        }
-
-        // Create DTO
+        // Create DTO for completion use case
         const completeDto: CompleteAppointmentDto = {
-          appointmentId: actualData.appointmentId,
-          insuredId: actualData.insuredId,
-          countryISO: actualData.countryISO,
-          scheduleId: actualData.scheduleId
+          appointmentId: completionData.appointmentId,
+          insuredId: completionData.insuredId,
+          countryISO: completionData.countryISO,
+          scheduleId: completionData.scheduleId,
+          status: completionData.status
         };
 
-        // Execute use case
+        // Execute use case - business logic in application layer
         await completeAppointmentUseCase.execute(completeDto);
 
         logger.info('Appointment completed successfully', {
           logId: 'appointment-completed-success',
-          appointmentId: actualData.appointmentId,
-          insuredId: maskInsuredId(actualData.insuredId),
-          countryISO: actualData.countryISO,
-          scheduleId: actualData.scheduleId
+          appointmentId: completionData.appointmentId,
+          insuredId: maskInsuredId(completionData.insuredId),
+          countryISO: completionData.countryISO,
+          scheduleId: completionData.scheduleId
         });
 
-      } catch (parseError) {
+        totalProcessed++;
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.error('Failed to process SQS record', {
           messageId: record.messageId,
-          error: (parseError as Error).message
+          error: errorMessage
         });
+        totalSkipped++;
         // Continue processing other records
       }
     }
+
+    // Log final batch summary
+    logger.info('Appointment completion batch processed', {
+      logId: 'appointment-completion-finished',
+      requestId,
+      totalRecords: event.Records.length,
+      processed: totalProcessed,
+      skipped: totalSkipped
+    });
 
   } catch (error) {
     logger.error('Failed to process appointment completion batch', {
@@ -180,3 +178,30 @@ const handleSQSEvent = async (event: SQSEvent, context: Context): Promise<void> 
     throw error;
   }
 };
+
+/**
+ * Helper function to parse and validate completion events
+ * This extracts presentation-layer parsing logic from the main handler
+ * Returns null if the event should be skipped
+ */
+function parseAndValidateCompletionEvent(rawEventBody: string, messageId: string): any | null {
+  try {
+    // Parse the JSON
+    const eventData = JSON.parse(rawEventBody);
+
+    // Handle EventBridge format (with detail wrapper)
+    let actualData = eventData;
+    if (eventData.detail && eventData['detail-type']) {
+      actualData = eventData.detail;
+    }
+
+    return actualData;
+
+  } catch (parseError) {
+    logger.error('Failed to parse event body', {
+      messageId,
+      error: parseError instanceof Error ? parseError.message : 'Parse error'
+    });
+    return null;
+  }
+}

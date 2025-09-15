@@ -11,7 +11,7 @@ import {
 
 // Infrastructure imports
 import { AWS_CONFIG } from '../../config/aws.config';
-import { DatabaseConnectionError } from '../../errors/aws.errors';
+import { DatabaseConnectionError, ScheduleNotFoundError } from '../../errors/aws.errors';
 
 // Shared imports
 import { Singleton } from '@medical-appointment/shared';
@@ -90,7 +90,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
     }
   }
 
-  async findByScheduleId(scheduleId: number, countryISO: CountryISO): Promise<Schedule | null> {
+  async findByScheduleId(scheduleId: number, countryISO: CountryISO): Promise<Schedule> {
     let connection: PoolConnection | null = null;
     
     try {
@@ -117,7 +117,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
           countryISO: countryISO.getValue(),
           scheduleId
         });
-        return null;
+        throw new ScheduleNotFoundError(scheduleId.toString());
       }
 
       const row = rowsArray[0];

@@ -29,7 +29,8 @@ import {
 
 // Infrastructure errors and utilities
 import { 
-  AppointmentNotFoundError, 
+  AppointmentNotFoundError,
+  ScheduleNotFoundError, 
   logBusinessError, 
   logInfrastructureError,
   maskInsuredId
@@ -324,6 +325,10 @@ export class EnhancedAppointmentRouteHandlers {
     }
 
     if (error instanceof AppointmentNotFoundError) {
+      return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
+    }
+
+    if (error instanceof ScheduleNotFoundError) {
       return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
     }
 

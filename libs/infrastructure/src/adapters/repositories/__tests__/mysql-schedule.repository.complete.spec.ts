@@ -178,11 +178,12 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
     it('should find schedule by ID successfully', async () => {
       const scheduleId = 123;
       const countryISO = CountryISO.PERU;
+      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       const mockRow = {
         center_id: 1,
         specialty_id: 2,
         medic_id: 3,
-        available_date: '2024-01-15T10:00:00.000Z',
+        available_date: futureDate.toISOString(),
         schedule_id: 123
       };
 
@@ -200,7 +201,7 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
       );
       expect(Schedule.create).toHaveBeenCalledWith({
         centerId: 1,
-        date: new Date('2024-01-15T10:00:00.000Z'),
+        date: futureDate,
         medicId: 3,
         scheduleId: 123,
         specialtyId: 2
@@ -212,30 +213,30 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
       );
     });
 
-    it('should return null when schedule not found', async () => {
+    it('should throw error when schedule not found', async () => {
       const scheduleId = 999;
       const countryISO = CountryISO.CHILE;
 
       mockConnection.execute.mockResolvedValue([[]] as any);
 
-      const result = await repository.findByScheduleId(scheduleId, countryISO);
+      await expect(repository.findByScheduleId(scheduleId, countryISO))
+        .rejects.toThrow('Schedule with ID 999 not found');
 
-      expect(result).toBeNull();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Schedule not found in MySQL',
         { countryISO: 'CL', scheduleId: 999 }
       );
     });
 
-    it('should handle null rows array', async () => {
+    it('should throw error for null rows array', async () => {
       const scheduleId = 123;
       const countryISO = CountryISO.PERU;
 
       mockConnection.execute.mockResolvedValue([null] as any);
 
-      const result = await repository.findByScheduleId(scheduleId, countryISO);
+      await expect(repository.findByScheduleId(scheduleId, countryISO))
+        .rejects.toThrow('Schedule with ID 123 not found');
 
-      expect(result).toBeNull();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Schedule not found in MySQL',
         { countryISO: 'PE', scheduleId: 123 }
@@ -264,7 +265,18 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
     it('should release connection after successful find', async () => {
       const scheduleId = 123;
       const countryISO = CountryISO.PERU;
-      mockConnection.execute.mockResolvedValue([[]] as any);
+      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const mockRow = {
+        center_id: 1,
+        specialty_id: 2,
+        medic_id: 3,
+        available_date: futureDate.toISOString(),
+        schedule_id: 123
+      };
+      mockConnection.execute.mockResolvedValue([[mockRow]] as any);
+
+      const mockScheduleInstance = { id: 123 };
+      jest.spyOn(Schedule, 'create').mockReturnValue(mockScheduleInstance as any);
 
       await repository.findByScheduleId(scheduleId, countryISO);
 
@@ -314,7 +326,7 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
 
     it('should find available schedules with date filter', async () => {
       const countryISO = CountryISO.CHILE;
-      const filterDate = new Date('2024-01-15');
+      const filterDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
       mockConnection.execute.mockResolvedValue([mockRows] as any);
 
       const mockScheduleInstances = [{ id: 123 }, { id: 124 }];
@@ -484,9 +496,9 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
         // This tests that the repository doesn't propagate release errors
       });
 
-      // Should not throw error despite release failure simulation
-      const result = await repository.findByScheduleId(scheduleId, countryISO);
-      expect(result).toBeNull();
+      // Should throw ScheduleNotFoundError but not propagate release errors
+      await expect(repository.findByScheduleId(scheduleId, countryISO))
+        .rejects.toThrow('Schedule with ID 123 not found');
       expect(mockConnection.release).toHaveBeenCalled();
     });
 
