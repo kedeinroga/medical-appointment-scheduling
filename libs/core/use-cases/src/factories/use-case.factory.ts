@@ -2,7 +2,7 @@
 import { 
   CreateAppointmentUseCase, 
   GetAppointmentsByInsuredIdUseCase,
-  CompleteAppointmentUseCase 
+  CompleteAppointmentUseCase,
 } from '../index';
 
 // Domain ports
