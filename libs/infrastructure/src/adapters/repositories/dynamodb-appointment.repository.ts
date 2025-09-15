@@ -13,7 +13,8 @@ import {
 } from '@medical-appointment/core-domain';
 
 // Infrastructure imports
-import { AppointmentNotFoundError, DynamoDBError } from '../../errors/aws.errors';
+import { DynamoDBError } from '../../errors/aws.errors';
+import { AppointmentNotFoundError } from '@medical-appointment/shared';
 import { AWS_CONFIG } from '../../config/aws.config';
 
 // Shared imports

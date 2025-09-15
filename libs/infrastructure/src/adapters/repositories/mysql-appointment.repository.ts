@@ -12,7 +12,8 @@ import {
 
 // Infrastructure imports
 import { AWS_CONFIG } from '../../config/aws.config';
-import { AppointmentNotFoundError, DatabaseConnectionError } from '../../errors/aws.errors';
+import { DatabaseConnectionError } from '../../errors/aws.errors';
+import { AppointmentNotFoundError } from '@medical-appointment/shared';
 
 // Shared imports
 import { Singleton } from '@medical-appointment/shared';

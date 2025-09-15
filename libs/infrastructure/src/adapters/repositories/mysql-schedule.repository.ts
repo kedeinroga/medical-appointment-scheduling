@@ -11,7 +11,10 @@ import {
 
 // Infrastructure imports
 import { AWS_CONFIG } from '../../config/aws.config';
-import { DatabaseConnectionError, ScheduleNotFoundError } from '../../errors/aws.errors';
+import { DatabaseConnectionError } from '../../errors/aws.errors';
+
+// Shared imports
+import { ScheduleNotFoundError } from '@medical-appointment/shared';
 
 // Shared imports
 import { Singleton } from '@medical-appointment/shared';

@@ -138,7 +138,7 @@ describe('EnhancedAppointmentRouteHandlers - Extended Coverage', () => {
       expect(result.statusCode).toBe(400);
       
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.error.errorCode).toBe('VALIDATION_ERROR');
+      expect(responseBody.error.errorCode).toBe('INVALID_INSURED_ID');
       expect(responseBody.error.message).toContain('Invalid insured ID: abc12');
     });
 
@@ -159,7 +159,7 @@ describe('EnhancedAppointmentRouteHandlers - Extended Coverage', () => {
       expect(result.statusCode).toBe(400);
       
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.error.errorCode).toBe('VALIDATION_ERROR');
+      expect(responseBody.error.errorCode).toBe('UNSUPPORTED_COUNTRY');
       expect(responseBody.error.message).toContain('Country US is not supported');
     });
 
@@ -180,7 +180,7 @@ describe('EnhancedAppointmentRouteHandlers - Extended Coverage', () => {
       expect(result.statusCode).toBe(400);
       
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.error.errorCode).toBe('VALIDATION_ERROR');
+      expect(responseBody.error.errorCode).toBe('INVALID_SCHEDULE');
       expect(responseBody.error.message).toContain('Invalid schedule: Schedule date cannot be in the past');
     });
 
@@ -201,7 +201,7 @@ describe('EnhancedAppointmentRouteHandlers - Extended Coverage', () => {
       expect(result.statusCode).toBe(404);
       
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.error.errorCode).toBe('NOT_FOUND');
+      expect(responseBody.error.errorCode).toBe('SCHEDULE_NOT_FOUND');
       expect(responseBody.error.message).toContain('Schedule with ID 999 for country PE not found');
     });
 

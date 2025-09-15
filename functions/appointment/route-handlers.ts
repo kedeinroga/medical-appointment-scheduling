@@ -328,17 +328,17 @@ export class EnhancedAppointmentRouteHandlers {
     // Domain validation errors - 400 Bad Request
     if (error instanceof InvalidInsuredIdError) {
       logBusinessError(this.logger, error, { requestId, operationType });
-      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.INVALID_INSURED_ID);
     }
 
     if (error instanceof UnsupportedCountryError) {
       logBusinessError(this.logger, error, { requestId, operationType });
-      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.UNSUPPORTED_COUNTRY);
     }
 
     if (error instanceof InvalidScheduleError) {
       logBusinessError(this.logger, error, { requestId, operationType });
-      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.INVALID_SCHEDULE);
     }
 
     // Business logic errors
@@ -350,12 +350,12 @@ export class EnhancedAppointmentRouteHandlers {
     // Not found errors - 404 Not Found
     if (error instanceof AppointmentNotFoundError) {
       logBusinessError(this.logger, error, { requestId, operationType });
-      return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
+      return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.APPOINTMENT_NOT_FOUND);
     }
 
     if (error instanceof ScheduleNotFoundError) {
       logBusinessError(this.logger, error, { requestId, operationType });
-      return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
+      return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.SCHEDULE_NOT_FOUND);
     }
 
     // Value object creation errors (usually validation issues)
