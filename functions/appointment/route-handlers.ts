@@ -36,6 +36,13 @@ import {
   maskInsuredId
 } from '@medical-appointment/shared';
 
+// Domain errors
+import {
+  InvalidInsuredIdError,
+  UnsupportedCountryError,
+  InvalidScheduleError
+} from '@medical-appointment/core-domain';
+
 // Shared utilities from functions layer (keeping existing commons)
 import { 
   ApiHandlerBase, 
@@ -318,21 +325,46 @@ export class EnhancedAppointmentRouteHandlers {
       stackTrace: error.stack
     });
 
+    // Domain validation errors - 400 Bad Request
+    if (error instanceof InvalidInsuredIdError) {
+      logBusinessError(this.logger, error, { requestId, operationType });
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    if (error instanceof UnsupportedCountryError) {
+      logBusinessError(this.logger, error, { requestId, operationType });
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    if (error instanceof InvalidScheduleError) {
+      logBusinessError(this.logger, error, { requestId, operationType });
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+    }
+
     // Business logic errors
     if (error.constructor.name === 'ValidationError') {
       logBusinessError(this.logger, error, { requestId, operationType });
       return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
     }
 
+    // Not found errors - 404 Not Found
     if (error instanceof AppointmentNotFoundError) {
+      logBusinessError(this.logger, error, { requestId, operationType });
       return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
     }
 
     if (error instanceof ScheduleNotFoundError) {
+      logBusinessError(this.logger, error, { requestId, operationType });
       return this.createErrorResponse(HTTP_STATUS.NOT_FOUND, error.message, ERROR_CODES.NOT_FOUND);
     }
 
-    // Infrastructure errors
+    // Value object creation errors (usually validation issues)
+    if (error.message.includes('Insured ID') || error.message.includes('Country ISO')) {
+      logBusinessError(this.logger, error, { requestId, operationType });
+      return this.createErrorResponse(HTTP_STATUS.BAD_REQUEST, error.message, ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    // Infrastructure errors - 500 Internal Server Error
     logInfrastructureError(this.logger, error, { requestId, operationType });
     return this.createErrorResponse(HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Internal server error', ERROR_CODES.INTERNAL_ERROR);
   }

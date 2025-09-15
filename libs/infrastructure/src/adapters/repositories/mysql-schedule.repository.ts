@@ -117,7 +117,7 @@ export class MySQLScheduleRepository implements IScheduleRepository {
           countryISO: countryISO.getValue(),
           scheduleId
         });
-        throw new ScheduleNotFoundError(scheduleId.toString());
+        throw new ScheduleNotFoundError(`${scheduleId} for country ${countryISO.getValue()}`);
       }
 
       const row = rowsArray[0];
@@ -137,6 +137,11 @@ export class MySQLScheduleRepository implements IScheduleRepository {
       return schedule;
 
     } catch (error) {
+      // Re-throw ScheduleNotFoundError as business error, not infrastructure error
+      if (error instanceof ScheduleNotFoundError) {
+        throw error;
+      }
+      
       this.logger.error('Failed to find schedule in MySQL', {
         countryISO: countryISO.getValue(),
         scheduleId,

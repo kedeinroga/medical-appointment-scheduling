@@ -220,7 +220,7 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
       mockConnection.execute.mockResolvedValue([[]] as any);
 
       await expect(repository.findByScheduleId(scheduleId, countryISO))
-        .rejects.toThrow('Schedule with ID 999 not found');
+        .rejects.toThrow('Schedule with ID 999 for country CL not found');
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Schedule not found in MySQL',
@@ -235,7 +235,7 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
       mockConnection.execute.mockResolvedValue([null] as any);
 
       await expect(repository.findByScheduleId(scheduleId, countryISO))
-        .rejects.toThrow('Schedule with ID 123 not found');
+        .rejects.toThrow('Schedule with ID 123 for country PE not found');
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Schedule not found in MySQL',
@@ -498,7 +498,7 @@ describe('MySQLScheduleRepository - Complete Coverage', () => {
 
       // Should throw ScheduleNotFoundError but not propagate release errors
       await expect(repository.findByScheduleId(scheduleId, countryISO))
-        .rejects.toThrow('Schedule with ID 123 not found');
+        .rejects.toThrow('Schedule with ID 123 for country PE not found');
       expect(mockConnection.release).toHaveBeenCalled();
     });
 

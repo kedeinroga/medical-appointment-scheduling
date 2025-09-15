@@ -198,7 +198,7 @@ describe(MySQLScheduleRepository.name, () => {
       mockConnection.execute.mockResolvedValue([[]]);
 
       await expect(repository.findByScheduleId(1, CountryISO.PERU))
-        .rejects.toThrow('Schedule with ID 1 not found');
+        .rejects.toThrow('Schedule with ID 1 for country PE not found');
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Schedule not found in MySQL',
