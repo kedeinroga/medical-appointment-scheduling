@@ -1,135 +1,134 @@
 # 🏥 Medical Appointment Scheduling API
 
-A robust backend application for scheduling medical appointments built with **Serverless Framework**, **TypeScript**, **Node.js**, and **AWS** services, implementing **Clean Architecture** principles.
+[![CI/CD Pipeline](https://github.com/kedeinroga/medical-appointment-scheduling/actions/workflows/deploy.yml/badge.svg)](https://github.com/kedeinroga/medical-appointment-scheduling/actions)
+[![Test Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](./coverage/index.html)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Serverless](https://img.shields.io/badge/Serverless-Framework-orange.svg)](https://www.serverless.com/)
+[![AWS](https://img.shields.io/badge/AWS-Lambda%20%7C%20DynamoDB%20%7C%20SNS-yellow.svg)](https://aws.amazon.com/)
 
-## 📋 Table of Contents
+Un sistema robusto de agendamiento de citas médicas construido con **Serverless Framework**, **TypeScript**, **Node.js** y servicios **AWS**, implementando principios de **Arquitectura Limpia** y patrones **SOLID**.
 
-- [🚀 Overview](#-overview)
-- [🏗️ Architecture](#️-architecture)
-- [📁 Project Structure](#-project-structure)
-- [⚡ Quick Start](#-quick-start)
-- [🔧 Development](#-development)
+## 📋 Tabla de Contenidos
+
+- [🚀 Descripción General](#-descripción-general)
+- [🏗️ Arquitectura](#️-arquitectura)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [⚡ Inicio Rápido](#-inicio-rápido)
+- [🔧 Desarrollo](#-desarrollo)
 - [🧪 Testing](#-testing)
-- [📡 API Documentation](#-api-documentation)
-- [🏗️ Infrastructure](#️-infrastructure)
-- [📊 Monitoring & Observability](#-monitoring--observability)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+- [📡 Documentación de API](#-documentación-de-api)
+- [🏗️ Infraestructura](#️-infraestructura)
+- [📊 Monitoreo](#-monitoreo)
+- [🤝 Contribuciones](#-contribuciones)
 
-## 🚀 Overview
+## 🚀 Descripción General
 
-This application handles medical appointment scheduling for multiple countries (Peru and Chile) using an event-driven architecture with AWS serverless services. The system processes appointment requests asynchronously and maintains data consistency across different regional databases.
+### ¿Qué hace este sistema?
+Sistema de agendamiento de citas médicas que maneja **múltiples países** (Perú y Chile) usando una **arquitectura orientada a eventos** con servicios serverless de AWS. El sistema procesa solicitudes de citas de forma **asíncrona** y mantiene consistencia de datos entre diferentes bases de datos regionales.
 
-### Business Flow
+### Flujo de Negocio Simplificado
 
-1. **Request Reception**: API Gateway → Lambda `appointment` → DynamoDB (status: "pending")
-2. **Country Routing**: Lambda `appointment` determines country → Routes to specific SNS topic (PE/CL)
-3. **Direct Processing**: Country-specific SNS topic → Country-specific SQS queue (no filtering)
-4. **Regional Processing**: Country-specific Lambda (PE/CL) → RDS MySQL (status: "scheduled")
-5. **Event Publishing**: Processing Lambda → EventBridge with completion events
-6. **Status Update**: EventBridge → SQS completion → Lambda `appointment` → DynamoDB (status: "completed")
+```mermaid
+graph LR
+    A[📱 POST /appointments] --> B[💾 DynamoDB pending]
+    B --> C[📨 SNS PE/CL]
+    C --> D[⚡ Lambda País]
+    D --> E[🗄️ MySQL scheduled]
+    E --> F[🔔 EventBridge]
+    F --> G[✅ DynamoDB completed]
+```
 
-### Implemented Patterns
+**Estados de Citas:**
+- `pending` → Solicitud recibida y en proceso
+- `scheduled` → Programada en el sistema del país  
+- `completed` → Proceso finalizado exitosamente
 
-#### SOLID Principles
-- **S**: Single Responsibility - Each class has a specific responsibility
-- **O**: Open/Closed - Extensible via interfaces and abstractions
-- **L**: Liskov Substitution - Interchangeable repository implementations
-- **I**: Interface Segregation - Specific interfaces per responsibility
-- **D**: Dependency Inversion - Dependency on abstractions, not concretions
+### Características Principales
+- ✅ **Arquitectura Limpia**: Separación clara de responsabilidades
+- ✅ **Event-Driven**: Comunicación asíncrona via eventos
+- ✅ **Multi-País**: Soporte nativo para PE y CL con lógicas específicas
+- ✅ **Alta Disponibilidad**: Sin puntos únicos de falla
+- ✅ **Escalabilidad Automática**: Se adapta a la demanda
+- ✅ **Validación Robusta**: Schemas Zod con tipado fuerte
+- ✅ **Monitoreo Completo**: Logs estructurados y métricas
+- ✅ **Testing Exhaustivo**: +90% cobertura de código
 
-#### Design Patterns
-1. **Repository Pattern**: Persistence abstraction
-2. **Factory Pattern**: Creation of use cases and dependencies
-3. **Adapter Pattern**: Integration with AWS services
-4. **Command Pattern**: Use cases as commands
-5. **Event-Driven Pattern**: Communication via domain events
+### Patrones Implementados
 
-#### Clean Architecture
-- **Presentation Layer**: Lambda handlers
-- **Application Layer**: Use cases (define Ports)
-- **Domain Layer**: Pure business logic (entities, rules)
-- **Infrastructure Layer**: Adapters (implement Ports with external tech)
+#### 🔧 SOLID Principles
+- **S**ingle Responsibility: Cada clase una responsabilidad específica
+- **O**pen/Closed: Extensible via interfaces y abstracciones
+- **L**iskov Substitution: Implementaciones intercambiables de repositorios
+- **I**nterface Segregation: Interfaces específicas por responsabilidad
+- **D**ependency Inversion: Dependencia en abstracciones, no concreciones
 
----
+#### 🏗️ Design Patterns
+- **Repository Pattern**: Abstracción de persistencia
+- **Factory Pattern**: Creación de casos de uso y dependencias
+- **Adapter Pattern**: Integración con servicios AWS
+- **Use Case Pattern**: Encapsulación de lógica de negocio
+- **Event-Driven Pattern**: Comunicación vía eventos de dominio
 
-### Production Considerations
-
-#### Security
-- [ ] Implement JWT authentication
-- [ ] Use IAM roles with least privilege
-- [ ] Configure CORS appropriately
-- [ ] Encrypt sensitive data
-- [ ] Implement rate limiting
-
-#### Performance
-- [ ] Optimize DynamoDB queries
-- [ ] Implement connection pooling for RDS
-- [ ] Configure dead letter queues
-- [ ] Implement circuit breakers
-
-#### Monitoring
-- [ ] Custom CloudWatch metrics
-- [ ] Distributed X-Ray tracing
-- [ ] Alarms for errors and latency
-- [ ] Operational dashboard
-
-#### Scalability
-- [ ] Auto-scaling for Lambda
-- [ ] Configure reserved concurrency
-- [ ] Implement backpressure in SQS
-- [ ] Partitioning strategy for DynamoDB
-
-## 🏗️ Architecture
+## 🏗️ Arquitectura
 
 ### Clean Architecture Layers
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Functions Layer                         │
-│                   (AWS Lambda Handlers)                     │
+│                   📱 Functions Layer                        │
+│                 (Lambda Handlers - AWS)                     │
 ├─────────────────────────────────────────────────────────────┤
-│                  Infrastructure Layer                       │
-│              (AWS Adapters & External Services)             │
+│                🔧 Infrastructure Layer                      │
+│            (Adapters - DynamoDB, SNS, MySQL)               │
 ├─────────────────────────────────────────────────────────────┤
-│                   Application Layer                         │
-│                     (Use Cases)                             │
+│                  🎯 Application Layer                       │
+│                   (Use Cases)                               │
 ├─────────────────────────────────────────────────────────────┤
-│                     Domain Layer                            │
-│               (Entities & Business Logic)                   │
+│                   🏢 Domain Layer                           │
+│             (Entities & Business Logic)                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Tech Stack
+- **Runtime**: Node.js 18.x ARM64
+- **Language**: TypeScript 5.0+
+- **Framework**: Serverless Framework 3.x
+- **Cloud**: AWS (Lambda, DynamoDB, SNS, SQS, EventBridge, RDS)
+- **Testing**: Jest + >90% coverage
+- **Validation**: Zod schemas
+- **Architecture**: Hexagonal/Clean Architecture + DDD
+- **CI/CD**: GitHub Actions + AWS
 
-- **Runtime**: Node.js 18.x
-- **Language**: TypeScript
-- **Framework**: Serverless Framework
-- **Package Manager**: npm
-- **Cloud Provider**: AWS
-- **Architecture**: Hexagonal/Clean Architecture
-- **Testing**: Jest
-- **Linting**: ESLint + Prettier
+### AWS Services
 
-## 📁 Project Structure
+| Servicio | Propósito | Configuración |
+|----------|-----------|---------------|
+| **🌐 API Gateway** | REST API endpoints | CORS, throttling, validation |
+| **⚡ Lambda (3)** | Compute serverless | appointment, appointment-pe, appointment-cl |
+| **💾 DynamoDB** | Storage principal | Tabla Appointments + GSI |
+| **📨 SNS (3)** | Message distribution | Topics por país + main |
+| **📋 SQS (3)** | Message queuing | Colas PE, CL, completion + DLQ |
+| **🔔 EventBridge** | Event routing | Bus personalizado + rules |
+| **🗄️ RDS MySQL** | Storage por país | Tablas appointment_pe, appointment_cl |
+| **🔐 IAM** | Security & permissions | Roles específicos por servicio |
+
+## 📁 Estructura del Proyecto
 
 ```
 medical-appointment-scheduling/
-├── 📄 serverless.yml                 # Main IaC configuration
-├── 📄 package.json                   # Root dependencies and scripts
-├── 📄 tsconfig.json                  # TypeScript configuration
-├── 📄 jest.config.js                 # Jest test configuration
-├── 📄 README.md                      # This file
+├── 📄 serverless.yml                 # Configuración principal IaC
+├── 📄 package.json                   # Dependencies & scripts raíz
+├── 📄 PROJECT-DOCUMENTATION.md       # 📖 Documentación completa
 │
-├── 📁 functions/                     # 🔧 Lambda function handlers
-│   ├── 📁 appointment/               # Main API handler & completion
-│   │   ├── handler.ts                # Main Lambda handler
+├── 📁 functions/                     # 📱 Lambda Handlers (Presentation)
+│   ├── 📁 appointment/               # API principal + completion
+│   │   ├── handler.ts                # Main handler (API + SQS)
+│   │   ├── route-handlers.ts         # Robust validation & routing
 │   │   ├── constants.ts              # Handler constants
-│   │   ├── utils.ts                  # Handler utilities
-│   │   ├── package.json              # Function dependencies
 │   │   └── __tests__/                # Function tests
-│   ├── 📁 appointment-pe/            # Peru processor
-│   └── 📁 appointment-cl/            # Chile processor
+│   ├── 📁 appointment-pe/            # Procesador Perú
+│   ├── 📁 appointment-cl/            # Procesador Chile
+│   └── 📁 shared/                    # Utilities comunes
 │
 ├── 📁 infrastructure/                # 🔌 Infrastructure as Code (IaC)
 │   ├── 📁 resources/                 # 📦 Cloud resources
@@ -142,664 +141,522 @@ medical-appointment-scheduling/
 │   │   └── seed-data.sql             # Database seeding script
 │   └── serverless.yml                # Infrastructure stack
 │
-├── 📁 libs/                          # 📚 Clean Architecture layers
-│   ├── 📁 core/                      # Core business logic
+├── 📁 libs/                          # 🏗️ Clean Architecture Layers
+│   ├── 📁 core/
 │   │   ├── 📁 domain/                # 🏢 Business entities & rules
-│   │   │   ├── src/
-│   │   │   │   ├── entities/         # Domain entities
-│   │   │   │   ├── value-objects/    # Value objects
-│   │   │   │   ├── repositories/     # Repository interfaces
-│   │   │   │   ├── ports/            # Port interfaces
-│   │   │   │   ├── events/           # Domain events
-│   │   │   │   └── errors/           # Domain errors
-│   │   │   └── __tests__/            # Domain tests
+│   │   │   ├── entities/             # Appointment, Schedule, Insured
+│   │   │   ├── value-objects/        # AppointmentId, CountryISO
+│   │   │   ├── ports/                # Repository interfaces
+│   │   │   └── events/               # Domain events
 │   │   └── 📁 use-cases/             # 🎯 Application logic
-│   │       ├── src/
-│   │       │   ├── create-appointment/
-│   │       │   ├── get-appointments/
-│   │       │   ├── process-appointment/
-│   │       │   └── complete-appointment/
-│   │       └── __tests__/            # Use case tests
-│   ├── 📁 infrastructure/            # 🔌 AWS adapters & external services
-│   │   ├── src/
-│   │   │   ├── adapters/             # AWS service adapters
-│   │   │   ├── config/               # Infrastructure config
-│   │   │   ├── factories/            # Factory classes
-│   │   │   └── errors/               # Infrastructure errors
-│   │   └── __tests__/                # Infrastructure tests
+│   │       ├── create-appointment/   # POST /appointments logic
+│   │       ├── get-appointments/     # GET /appointments/{id} logic
+│   │       ├── process-country-appointment/  # Country processing
+│   │       ├── complete-appointment/ # Completion logic
+│   │       └── factories/            # Dependency injection
+│   ├── 📁 infrastructure/            # 🔧 AWS Adapters
+│   │   ├── adapters/
+│   │   │   ├── repositories/         # DynamoDB, MySQL implementations
+│   │   │   └── messaging/            # SNS, EventBridge adapters
+│   │   ├── config/                   # AWS configuration
+│   │   └── factories/                # Infrastructure factories
 │   └── 📁 shared/                    # 🔄 Common utilities
-│       ├── src/utils/                # Utility functions
-│       └── __tests__/                # Shared tests
 │
-├── 📁 resources/                     # 🏗️ Infrastructure as Code (IaC)
-│   ├── api-gateway.yml               # API Gateway configuration
+├── 📁 resources/                     # 🏛️ Infrastructure as Code
+│   ├── api-gateway.yml               # API Gateway config
 │   ├── dynamodb.yml                  # DynamoDB tables
-│   ├── sns.yml                       # SNS topics & subscriptions
-│   ├── sqs.yml                       # SQS queues & policies
-│   ├── eventbridge.yml               # EventBridge rules & targets
+│   ├── sns.yml                       # SNS topics (3)
+│   ├── sqs.yml                       # SQS queues (3) + DLQ
+│   ├── eventbridge.yml               # EventBridge rules
 │   └── iam.yml                       # IAM roles & policies
 │
-├── 📁 config/                        # ⚙️ Environment configurations
-│   ├── dev.yml                       # Development config
-│   ├── staging.yml                   # Staging config
-│   └── prod.yml                      # Production config
+├── 📁 config/                        # ⚙️ Environment configs
+│   ├── dev.yml                       # Development
+│   ├── staging.yml                   # Staging  
+│   └── prod.yml                      # Production
 │
-├── 📁 scripts/                       # 🔨 Deployment & utility scripts
-│   ├── deploy.sh                     # Deployment script
-│   ├── infrastructure.sh             # Infrastructure setup
-│   └── test.sh                       # Testing script
-│
-├── 📁 test/                          # 🧪 Integration tests
+├── 📁 test/                          # 🧪 Testing
 │   ├── e2e/                          # End-to-end tests
 │   └── integration/                  # Integration tests
 │
 ├── 📁 docs/                          # 📖 Documentation
 │   ├── openapi.yml                   # OpenAPI/Swagger spec
-│   ├── swagger.json                  # Swagger JSON spec
 │   └── INFRASTRUCTURE.md             # Infrastructure docs
 │
-└── 📁 static/                        # 📋 Project static
+└── 📁 static/                        # 📋 Business docs
     ├── REQUIREMENTS.md               # Business requirements
     └── diagrama.png                  # Architecture diagram
 ```
 
-## ⚡ Quick Start
+## ⚡ Inicio Rápido
 
 ### Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- **Node.js** >= 18.0.0
-- **npm** >= 8.0.0
-- **AWS CLI** configured with appropriate permissions
-- **Serverless Framework** >= 3.0.0
-
 ```bash
-# Check Node.js version
-node --version
+# Verificar versiones requeridas
+node --version    # >= 18.0.0
+npm --version     # >= 8.0.0
+aws --version     # >= 2.0.0
 
-# Check npm version
-npm --version
+# Instalar Serverless Framework
+npm install -g serverless@3
 
-# Install Serverless Framework globally
-npm install -g serverless
-
-# Verify AWS CLI configuration
+# Verificar configuración AWS
 aws configure list
 ```
 
-### Installation
+### Instalación
 
-1. **Clone the repository**
 ```bash
+# 1. Clonar repositorio
 git clone https://github.com/kedeinroga/medical-appointment-scheduling.git
 cd medical-appointment-scheduling
-```
 
-2. **Install dependencies**
-```bash
-# Install root dependencies
+# 2. Instalar dependencias
 npm install
 
-# Install function dependencies
-npm run install:functions
-
-# Build all packages
+# 3. Build del proyecto
 npm run build
+
+# 4. Ejecutar tests
+npm test
 ```
 
-### Environment Setup
-
-1. **Configure AWS credentials**
-```bash
-aws configure
-# Enter your AWS Access Key ID, Secret Access Key, and region
-```
-
-2. **Set up environment variables**
-```bash
-# Copy environment template (if exists)
-cp config/dev.yml.template config/dev.yml
-
-# Edit the configuration file with your values
-```
-
-### Deployment
+### Despliegue Rápido
 
 ```bash
-# Deploy to development environment
+# Development
 npm run deploy:dev
 
-# Deploy to production environment
+# Production
 npm run deploy:prod
 
-# Or use the deployment script with specific region
-./scripts/deploy.sh dev us-east-1
+# Verificar despliegue
+npm run test:e2e
 ```
 
-## 🔧 Development
+## 🔧 Desarrollo
 
-### Running Locally
-
-For local development, you can use Serverless Offline:
-
-```bash
-# Start serverless offline
-npm run start:local
-
-# The API will be available at:
-# http://localhost:3000
-```
-
-### Available Scripts
+### Scripts Disponibles
 
 ```bash
 # 🏗️ Build & Development
-npm run build              # Build all packages
-npm run build:functions    # Build only functions
-npm run build:libs         # Build only libraries
-npm run clean              # Clean all build artifacts
-npm run lint               # Run ESLint on all packages
-npm run lint:fix           # Fix ESLint issues automatically
+npm run build                # Build completo
+npm run build:functions      # Solo functions
+npm run clean               # Limpiar artifacts
 
 # 🧪 Testing
-npm run test               # Run all tests
-npm run test:unit          # Run unit tests only
-npm run test:integration   # Run integration tests only
-npm run test:coverage      # Run tests with coverage report
-npm run test:watch         # Run tests in watch mode
+npm test                    # Todos los tests
+npm run test:unit           # Unit tests
+npm run test:integration    # Integration tests  
+npm run test:coverage       # Con reporte de coverage
+npm run test:watch          # Watch mode
+npm run test:e2e           # End-to-end tests
 
 # 🚀 Deployment
-npm run deploy:dev         # Deploy to development
-npm run deploy:staging     # Deploy to staging
-npm run deploy:prod        # Deploy to production
+npm run deploy:dev          # Deploy a development
+npm run deploy:staging      # Deploy a staging
+npm run deploy:prod         # Deploy a production
 
 # 🛠️ Utilities
-npm run logs:appointment   # View appointment function logs
-npm run logs:pe           # View Peru processor logs
-npm run logs:cl           # View Chile processor logs
-npm run start:local       # Start serverless offline
+npm run logs:appointment    # Ver logs function principal
+npm run logs:pe            # Ver logs Peru processor
+npm run logs:cl            # Ver logs Chile processor
+npm run start:local        # Serverless offline
+npm run lint               # ESLint check
+npm run lint:fix           # ESLint auto-fix
+```
 
-# More scripts available in package.json
+### Desarrollo Local
+
+```bash
+# Iniciar desarrollo local
+npm run start:local
+
+# API disponible en:
+# http://localhost:3000
+
+# Endpoints locales:
+# POST http://localhost:3000/dev/appointments
+# GET  http://localhost:3000/dev/appointments/{insuredId}
 ```
 
 ### Environment Variables
 
-The application uses environment-specific configuration files:
-
-**config/dev.yml**
 ```yaml
-# Development configuration
-rds:
-  host: dev-medical-rds.cluster-xxxxx.us-east-1.rds.amazonaws.com
-  port: 3306
-  database: medical_appointments_dev
-  username: dev_user
+# config/dev.yml - Configuración de desarrollo
+logging:
+  level: DEBUG
+  retentionDays: 7
+
+database:
+  mysql:
+    connectionLimit: 5
 
 api:
   throttling:
     rateLimit: 100
     burstLimit: 200
 
-logging:
-  level: DEBUG
-  retention: 7
-
-# AWS service configurations
-dynamodb:
-  appointmentsTable: appointments-table-dev
-
-sns:
-  appointmentTopic: appointment-notifications-dev        # Legacy/backup topic
-  peAppointmentTopic: appointments-pe-dev               # Peru topic
-  clAppointmentTopic: appointments-cl-dev               # Chile topic
-
-sqs:
-  peQueue: appointments-pe-dev
-  clQueue: appointments-cl-dev
-  completionQueue: appointments-completion-dev
+# Variables de entorno principales:
+STAGE: dev
+LOG_LEVEL: DEBUG
+APPOINTMENTS_TABLE_NAME: appointments-table-dev
+RDS_HOST: dev-medical-rds.cluster-xxxxx.us-east-1.rds.amazonaws.com
 ```
-
-**Environment Variables Reference:**
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ENVIRONMENT` | Deployment environment | `development` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `AWS_REGION` | AWS region | `us-east-1` |
-| `APPOINTMENTS_TABLE_NAME` | DynamoDB table name | Set by serverless |
-| `RDS_HOST` | RDS MySQL host | From config |
-| `RDS_PORT` | RDS MySQL port | `3306` |
-| `RDS_DATABASE` | Database name | From config |
-| `RDS_USERNAME` | Database username | From config |
-| `RDS_PASSWORD` | Database password | From SSM |
 
 ## 🧪 Testing
 
-### Running Tests
+### Cobertura de Tests
 
-The project includes comprehensive testing at all architectural layers:
+| Layer | Coverage | Files | Descripción |
+|-------|----------|-------|-------------|
+| **🏢 Domain** | 95%+ | 15+ | Entities, Value Objects, Domain Services |
+| **🎯 Application** | 90%+ | 12+ | Use Cases y orquestación |
+| **🔧 Infrastructure** | 80%+ | 18+ | Adapters y integraciones AWS |
+| **📱 Functions** | 85%+ | 8+ | Lambda handlers |
+| **📊 Overall** | 90%+ | 50+ | Codebase completo |
+
+### Ejecutar Tests
 
 ```bash
-# Run all tests
-npm run test
+# Tests completos con coverage
+npm run test:coverage
 
-# Run specific test suites
-npm run test:unit                    # Unit tests only
-npm run test:integration            # Integration tests only
-npm run test:coverage              # With coverage report
+# Ver reporte HTML
+open coverage/index.html
 
-# Run tests for specific packages
-npm run test libs/core/domain         # Domain layer tests
-npm run test libs/core/use-cases      # Use case tests
-npm run test libs/infrastructure      # Infrastructure tests
-npm run test functions/appointment    # Main function tests
-npm run test functions/appointment-pe # Peru function tests
-npm run test functions/appointment-cl # Chile function tests
+# Tests específicos por layer
+npm test libs/core/domain         # Domain tests
+npm test libs/core/use-cases      # Use case tests  
+npm test libs/infrastructure      # Infrastructure tests
+npm test functions/appointment    # Function tests
 
-# Watch mode for development
+# Tests en modo watch
 npm run test:watch
 
-# Debug mode
-npm run test:debug
+# E2E tests (requiere deploy previo)
+npm run test:e2e
 ```
 
-### Test Coverage
+### Tipos de Tests
 
-The project maintains high test coverage across all architectural layers:
+**🔬 Unit Tests**: Entities, Value Objects, Use Cases
+**🔗 Integration Tests**: Repositories, AWS services, Database
+**📱 Function Tests**: Lambda handlers, API responses
+**🌐 E2E Tests**: Flujos completos de negocio
 
-| Layer | Coverage | Files | Description |
-|-------|----------|-------|-------------|
-| **Domain** | 95%+ | 15+ | Entities, Value Objects, Domain Services |
-| **Application** | 90%+ | 12+ | Use Cases and orchestration |
-| **Infrastructure** | 80%+ | 18+ | Adapters and AWS integrations |
-| **Functions** | 85%+ | 8+ | Lambda handlers |
-| **Overall** | 87%+ | 50+ | Complete codebase |
+## 📡 Documentación de API
 
-**View Coverage Report:**
-```bash
-# Generate and open coverage report
-npm run test:coverage
-open coverage/index.html
-```
+### Endpoints Disponibles
 
-### Test Types
-
-**1. Unit Tests**
-- Domain entities and value objects
-- Use case business logic
-- Utility functions
-- Pure functions without external dependencies
-
-```bash
-# Examples of unit test files
-libs/core/domain/src/__tests__/entities/appointment.entity.test.ts
-libs/core/use-cases/src/__tests__/create-appointment.use-case.test.ts
-libs/shared/src/__tests__/utils/validation.util.test.ts
-```
-
-**2. Integration Tests**
-- Repository implementations with AWS services
-- Message publishing and consumption
-- Database operations
-- External service integrations
-
-```bash
-# Examples of integration test files
-libs/infrastructure/src/__tests__/adapters/dynamodb-appointment.repository.test.ts
-test/integration/appointment-workflow.test.ts
-```
-
-**3. Function Tests**
-- Lambda handler testing
-- API Gateway event processing
-- SQS event processing
-- Error handling and responses
-
-```bash
-# Examples of function test files
-functions/appointment/__tests__/handler.test.ts
-functions/appointment-pe/__tests__/handler.test.ts
-```
-
-**4. End-to-End Tests**
-- Complete workflow testing
-- Multi-service integration
-- Error scenarios and edge cases
-
-## 📡 API Documentation
-
-### Endpoints
-
-The API provides the following endpoints:
-
-| Method | Endpoint | Description | Status |
+| Method | Endpoint | Descripción | Status |
 |--------|----------|-------------|---------|
-| `POST` | `/appointments` | Create new appointment | ✅ Implemented |
-| `GET` | `/appointments/{insuredId}` | Get appointments by insured ID | ✅ Implemented |
-| `OPTIONS` | `/*` | CORS preflight requests | ✅ Implemented |
+| `POST` | `/appointments` | Crear nueva cita | ✅ Implementado |
+| `GET` | `/appointments/{insuredId}` | Obtener citas por asegurado | ✅ Implementado |
 
-### Request/Response Examples
+### Ejemplos de Uso
 
-#### Create Appointment
+#### 📝 Crear Cita
 
-**Request:**
 ```http
 POST /appointments
 Content-Type: application/json
 
 {
-  "insuredId": "00123",
+  "insuredId": "12345",
   "scheduleId": 100,
   "countryISO": "PE"
 }
 ```
 
-**Response (201 Created):**
+**Respuesta (201 Created):**
 ```json
 {
-  "data": {
-    "appointmentId": "550e8400-e29b-41d4-a716-446655440000",
-    "status": "pending",
-    "message": "Appointment scheduling is in process"
-  },
-  "timestamp": "2024-09-11T10:00:00Z"
+  "appointmentId": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Appointment scheduling is in process",
+  "status": "pending"
 }
 ```
 
-**Error Response (400 Bad Request):**
+#### 📋 Consultar Citas
+
+```http
+GET /appointments/12345?status=completed&limit=10&offset=0
+```
+
+**Respuesta (200 OK):**
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid insured ID format. Must be 5 digits",
-    "timestamp": "2024-09-11T10:00:00Z"
+  "appointments": [
+    {
+      "appointmentId": "550e8400-e29b-41d4-a716-446655440000",
+      "insuredId": "12345",
+      "countryISO": "PE",
+      "status": "completed",
+      "schedule": {
+        "scheduleId": 100,
+        "centerId": 1,
+        "specialtyId": 3,
+        "medicId": 4,
+        "date": "2024-09-20T14:30:00Z"
+      },
+      "createdAt": "2024-09-15T10:30:00Z",
+      "processedAt": "2024-09-15T10:35:00Z"
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "total": 5,
+    "limit": 10,
+    "offset": 0,
+    "hasMore": false,
+    "totalPages": 1,
+    "currentPage": 1
+  },
+  "filters": {
+    "status": "completed",
+    "startDate": null,
+    "endDate": null
   }
 }
 ```
 
-#### Get Appointments
+### Validaciones API
 
-**Request:**
-```http
-GET /appointments/00123
-```
+- **insuredId**: Exactamente 5 dígitos (auto-padding con ceros)
+- **scheduleId**: Número entero positivo
+- **countryISO**: Solo "PE" o "CL"
+- **Query filters**: status, startDate, endDate, limit (1-100), offset (≥0)
 
-**Response (200 OK):**
-```json
-{
-    "data": {
-        "appointments": [
-            {
-                "appointmentId": "b81fbb9f-d76e-4361-b06a-9e1b7d87f27b",
-                "countryISO": "PE",
-                "createdAt": "2025-09-14T12:08:36.519Z",
-                "insuredId": "10133",
-                "processedAt": null,
-                "schedule": {
-                    "centerId": 1,
-                    "date": "2025-09-17T04:29:13.000Z",
-                    "medicId": 1,
-                    "specialtyId": 1
-                },
-                "scheduleId": 5,
-                "status": "completed",
-                "updatedAt": "2025-09-14T12:08:38.300Z"
-            }
-        ],
-        "pagination": {
-            "count": 1,
-            "total": 1,
-            "limit": 20,
-            "offset": 0,
-            "hasMore": false,
-            "totalPages": 1,
-            "currentPage": 1
-        },
-        "filters": {
-            "status": null,
-            "startDate": null,
-            "endDate": null
-        },
-        "meta": {
-            "totalAvailable": 1,
-            "totalFiltered": 1,
-            "filterApplied": false
-        }
-    }
-```
-
-### OpenAPI/Swagger Documentation
-
-Complete API documentation is available in OpenAPI 3.0 format:
+### Documentación Completa
 
 ```bash
-# View the OpenAPI specification
+# Ver especificación OpenAPI/Swagger
 cat docs/openapi.yml
 
-# View Swagger docs
-cat docs/swagger.json
-
-# Generate interactive documentation (if you have swagger-ui)
-npx swagger-ui-serve docs/openapi.yml
-
-# Generate swagger.json
-npm run docs:generate
+# Ver documentación completa del proyecto
+cat PROJECT-DOCUMENTATION.md
 ```
 
-## 🏗️ Infrastructure
+## 🏗️ Infraestructura
 
-### AWS Services
+### AWS Lambda Functions
 
-The application uses the following AWS services:
+| Function | Propósito | Event Sources | Responsabilidades |
+|----------|-----------|---------------|-------------------|
+| **`appointment`** | Handler principal | API Gateway, SQS completion | API endpoints, finalización de citas |
+| **`appointment-pe`** | Procesador Perú | SQS PE queue | Lógica específica PE, MySQL PE |
+| **`appointment-cl`** | Procesador Chile | SQS CL queue | Lógica específica CL, MySQL CL |
 
-| Service | Purpose | Configuration |
-|---------|---------|---------------|
-| **API Gateway** | REST API endpoints | `resources/api-gateway.yml` |
-| **AWS Lambda** | Serverless compute (3 functions) | Function definitions in `functions/` |
-| **DynamoDB** | Primary appointment storage | `resources/dynamodb.yml` |
-| **SNS** | Message distribution (3 topics - main + per country) | `resources/sns.yml` |
-| **SQS** | Message queuing for processing | `resources/sqs.yml` |
-| **EventBridge** | Event-driven communication | `resources/eventbridge.yml` |
-| **RDS MySQL** | Country-specific appointment storage | External `infrastructure/serverless.yml` |
-| **IAM** | Security and permissions | `resources/iam.yml` |
-| **CloudWatch** | Logging and monitoring | Built-in |
+### Flujo de Datos
 
-### Lambda Functions Overview
+```mermaid
+sequenceDiagram
+    participant API as API Gateway
+    participant LAM as appointment λ
+    participant DDB as DynamoDB
+    participant SNS as SNS PE/CL
+    participant SQS as SQS PE/CL  
+    participant PE as appointment-pe λ
+    participant RDS as MySQL RDS
+    participant EB as EventBridge
+    participant SQC as SQS Completion
 
-The system consists of **3 Lambda functions**, each with specific responsibilities:
+    API->>LAM: POST /appointments
+    LAM->>DDB: Save (status: pending)
+    LAM->>SNS: Publish country event
+    SNS->>SQS: Route to country queue
+    SQS->>PE: Process country appointment
+    PE->>RDS: Save (status: scheduled)
+    PE->>EB: Publish completion event
+    EB->>SQC: Route completion
+    SQC->>LAM: Process completion
+    LAM->>DDB: Update (status: completed)
+```
 
-| Function | Purpose | Event Sources | Key Features |
-|----------|---------|---------------|--------------|
-| **`appointment`** | Main API handler + Completion processor | API Gateway, SQS (completion) | Creates appointments, handles completion events |
-| **`appointment-pe`** | Peru region processor | SQS (PE queue) | Processes PE appointments, writes to RDS |
-| **`appointment-cl`** | Chile region processor | SQS (CL queue) | Processes CL appointments, writes to RDS |
+### Database Schema
 
-**Function Flow:**
-1. `appointment` receives API requests → Creates DynamoDB record → Routes to country-specific SNS topic
-2. `appointment-pe`/`appointment-cl` process country-specific messages → Update RDS → Publish events
-3. `appointment` receives completion events → Updates DynamoDB status to "completed"
-
-### Infrastructure as Code
-
-All AWS resources are defined as code using Serverless Framework:
-
-**Main Configuration:**
+#### DynamoDB - Appointments Table
 ```yaml
-# serverless.yml - Main orchestrator
-service: medical-appointment-scheduling
+Partition Key: appointmentId (String)
+GSI: insuredId-index
+  - PK: insuredId (String)  
+  - SK: createdAt (String)
 
-provider:
-  name: aws
-  runtime: nodejs18.x
-  region: ${opt:region, 'us-east-1'}
-  stage: ${opt:stage, 'dev'}
-
-resources:
-  - ${file(resources/dynamodb.yml)}
-  - ${file(resources/sns.yml)}
-  - ${file(resources/sqs.yml)}
-  - ${file(resources/eventbridge.yml)}
-  - ${file(resources/iam.yml)}
-  - ${file(resources/api-gateway.yml)}
+Attributes:
+  appointmentId: UUID v4
+  insuredId: "12345" (5 digits)
+  countryISO: "PE" | "CL"
+  status: "pending" | "completed"
+  schedule: { complete object }
+  timestamps: createdAt, updatedAt, processedAt
 ```
 
-**Deploy Infrastructure:**
+#### MySQL - Country Tables
+```sql
+-- Tables: appointment_pe, appointment_cl
+CREATE TABLE appointment_pe (
+  appointment_id VARCHAR(36) PRIMARY KEY,
+  insured_id VARCHAR(5) NOT NULL,
+  schedule_id INT NOT NULL,
+  country_iso CHAR(2) DEFAULT 'PE',
+  center_id INT NOT NULL,
+  specialty_id INT NOT NULL,
+  medic_id INT NOT NULL,
+  appointment_date DATETIME NOT NULL,
+  status VARCHAR(20) DEFAULT 'scheduled',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_insured_id (insured_id),
+  INDEX idx_appointment_date (appointment_date)
+);
+```
+
+### Comandos de Infraestructura
+
 ```bash
-# Deploy complete infrastructure
+# Deploy completo
 npm run deploy:dev
 
-# Deploy specific function
+# Deploy función específica
 serverless deploy function --function appointment --stage dev
 
-# Remove infrastructure
+# Ver información del stack
+serverless info --stage dev
+
+# Ver logs
+serverless logs --function appointment --stage dev --tail
+
+# Invocar función localmente
+serverless invoke local --function appointment --path test/fixtures/create-appointment.json
+
+# Remover stack completo
 npm run remove:dev
 ```
 
-**Infrastructure Commands:**
-```bash
-# View deployed resources
-serverless info --stage dev
+## 📊 Monitoreo
 
-# View function logs
-serverless logs --function appointment --stage dev
-
-# Invoke function locally
-serverless invoke local --function appointment --path test/fixtures/create-appointment.json
-
-# Invoke deployed function
-serverless invoke --function appointment --stage dev --path test/fixtures/create-appointment.json
-```
-
-## 📊 Monitoring & Observability
-
-### Logging
-
-The application uses structured logging with AWS PowerTools:
+### Logging Estructurado
 
 ```typescript
-// Example logging in use cases
-logger.info('Creating appointment', {
+// Ejemplo de logging con AWS PowerTools
+logger.info('Appointment created successfully', {
+  logId: 'appointment-created-success',
+  appointmentId: result.appointmentId,
+  insuredId: maskInsuredId(dto.insuredId), // PII masking
   countryISO: dto.countryISO,
-  insuredId: maskInsuredId(dto.insuredId),
-  scheduleId: dto.scheduleId
+  requestId: context.awsRequestId
 });
 ```
 
-**Log Levels:**
-- `DEBUG`: Development debugging
-- `INFO`: General information
-- `WARN`: Warning conditions
-- `ERROR`: Error conditions
+### Métricas CloudWatch
 
-### Metrics & Alarms
-
-CloudWatch metrics and alarms are configured for:
-
-- **API Gateway**: Request count, latency, 4xx/5xx errors
-- **Lambda Functions**: Duration, errors, concurrent executions
-- **DynamoDB**: Read/write capacity, throttling
-- **SQS**: Message count, age, dead letter queue
-- **SNS**: Published messages, delivery failures
+- **🌐 API Gateway**: Request count, latency, errors 4xx/5xx
+- **⚡ Lambda**: Duration, errors, concurrent executions
+- **💾 DynamoDB**: Read/write capacity, throttling
+- **📋 SQS**: Message count, age, dead letter queue
+- **📨 SNS**: Published messages, delivery failures
 
 ### Health Checks
 
 ```bash
-# Check API health (if health endpoint is implemented)
+# Verificar salud de la API
 curl https://your-api-gateway-url/health
 
-# Check individual function health
-serverless invoke --function appointment --stage dev --data '{"healthCheck": true}'
+# Verificar logs de errores
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/medical-appointment-scheduling-dev-appointment \
+  --filter-pattern "ERROR"
+
+# Verificar profundidad de colas SQS
+aws sqs get-queue-attributes \
+  --queue-url https://sqs.region.amazonaws.com/account/appointments-pe-dev \
+  --attribute-names ApproximateNumberOfMessages
 ```
 
-## 🤝 Contributing
+### Alertas Configuradas
 
-We welcome contributions! Please follow these guidelines:
+- **Lambda Errors** > 5 en 5 minutos
+- **DynamoDB Throttling** > 0
+- **SQS Dead Letter Queue** > 0
+- **API Gateway 5xx Errors** > 1%
 
-### Development Workflow
+## 🤝 Contribuciones
 
-1. **Fork the repository**
+### Workflow de Desarrollo
+
 ```bash
+# 1. Fork y clone
 git clone https://github.com/your-username/medical-appointment-scheduling.git
 cd medical-appointment-scheduling
-```
 
-2. **Create a feature branch**
-```bash
-git checkout -b feature/your-feature-name
-```
+# 2. Crear feature branch
+git checkout -b feature/nueva-funcionalidad
 
-3. **Install dependencies and setup**
-```bash
+# 3. Instalar y setup
 npm install
 npm run build
-```
 
-4. **Make your changes**
-- Follow the existing code style
-- Add tests for new functionality
-- Update documentation as needed
+# 4. Desarrollar con tests
+npm run test:watch
 
-5. **Run tests and checks**
-```bash
-npm run test
+# 5. Verificaciones pre-commit
+npm test
 npm run lint
 npm run test:coverage
-```
 
-6. **Commit your changes**
-```bash
+# 6. Commit y push
 git add .
-git commit -m "feat: add your feature description"
+git commit -m "feat: add nueva funcionalidad"
+git push origin feature/nueva-funcionalidad
+
+# 7. Crear Pull Request
 ```
 
-7. **Push and create PR**
-```bash
-git push origin feature/your-feature-name
-# Create a Pull Request on GitHub
-```
-
-### Code Standards
+### Estándares de Código
 
 - **TypeScript**: Strict mode, explicit types, no `any`
-- **Naming**: camelCase for variables, PascalCase for classes
-- **Imports**: Alphabetical ordering, group by source
-- **Testing**: Minimum 80% coverage for new code
-- **Documentation**: JSDoc for public APIs
+- **Naming**: camelCase variables, PascalCase classes
+- **Testing**: Mínimo 80% coverage para código nuevo
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/)
+- **Documentation**: JSDoc para APIs públicas
 
-### Commit Convention
-
-We use [Conventional Commits](https://www.conventionalcommits.org/):
+### Convención de Commits
 
 ```
-feat: add new feature
-fix: bug fix
-docs: documentation changes
-style: formatting changes
-refactor: code refactoring
-test: adding tests
-chore: maintenance tasks
+feat: nueva funcionalidad
+fix: bug fix  
+docs: cambios de documentación
+style: formateo
+refactor: refactoring de código
+test: añadir tests
+chore: tareas de mantenimiento
 ```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Built with ❤️ using Clean Architecture, Serverless Framework, and AWS**
+## 📚 Documentación Adicional
 
-## 📞 Support & Contact
+- 📖 **[Documentación Completa](PROJECT-DOCUMENTATION.md)** - Guía técnica y de negocio completa
+- 🏗️ **[Documentación de Infraestructura](docs/INFRASTRUCTURE.md)** - Setup y configuración AWS
+- 📋 **[Requerimientos de Negocio](static/REQUIREMENTS.md)** - Especificaciones originales
+- 🔌 **[Especificación OpenAPI](docs/openapi.yml)** - Documentación de API
+- 📊 **[Diagrama de Arquitectura](static/diagrama.png)** - Diagrama visual del sistema
 
-- **Documentation**: [Project Wiki](https://github.com/kedeinroga/medical-appointment-scheduling/wiki)
-- **Issues**: [GitHub Issues](https://github.com/kedeinroga/medical-appointment-scheduling/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/kedeinroga/medical-appointment-scheduling/discussions)
+## 🤝 Soporte
+
+### Reportar Problemas
+- **GitHub Issues**: [Repository Issues](https://github.com/kedeinroga/medical-appointment-scheduling/issues)
+
+### Contribución
+Ver [guía de contribución](#-contribuciones) arriba para detalles completos del proceso.
 
 ---
 
-### 🔗 Related Documentation
+**🏥 Built with ❤️ using Clean Architecture, SOLID Principles, and AWS Serverless**
 
-- [Business Requirements](static/REQUIREMENTS.md)
-- [Infrastructure Setup](docs/INFRASTRUCTURE.md)
-- [OpenAPI Specification](docs/openapi.yml)
-- [Architecture Diagram](static/diagrama.png)
+**📅 Última actualización**: Septiembre 2024  
+**🔄 Versión**: 1.2.0  
+**📝 Mantenido por**: Equipo de Desarrollo Medical Appointments
