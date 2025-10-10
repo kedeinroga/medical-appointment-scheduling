@@ -1,0 +1,211 @@
+# Enhanced RDS with better CREATE/UPDATE handling
+Resources:
+  # VPC - Stable resource
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: medical-appointment-vpc-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # Internet Gateway - Stable resource
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: medical-appointment-igw-${self:provider.stage}
+
+  # VPC Gateway Attachment - Critical dependency
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Wait Condition - Ensures network is ready before proceeding
+  NetworkReadyWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Handle: !Ref NetworkReadyWaitHandle
+      Timeout: "300"
+      Count: 0  # Don't actually wait for signals
+
+  NetworkReadyWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  # Public Subnets - Depend on network being ready
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: NetworkReadyWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: medical-appointment-public-subnet-1-${self:provider.stage}
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: NetworkReadyWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: medical-appointment-public-subnet-2-${self:provider.stage}
+
+  # Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: NetworkReadyWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: medical-appointment-public-rt-${self:provider.stage}
+
+  # Public Route - Explicit dependency on VPCGatewayAttachment
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: 
+      - VPCGatewayAttachment
+      - NetworkReadyWaitCondition
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # Route Table Associations - Sequential dependencies
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn: PublicRoute
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn: 
+      - PublicRoute
+      - PublicSubnet1RouteTableAssociation  # Sequential creation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # DB Subnet Group - Wait for all networking
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DependsOn:
+      - PublicSubnet1RouteTableAssociation
+      - PublicSubnet2RouteTableAssociation
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Medical Appointment RDS instance
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: medical-appointment-db-subnet-group-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # RDS Security Group
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: NetworkReadyWaitCondition
+    Properties:
+      GroupDescription: Security group for Medical Appointment RDS instance
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+          Description: Allow MySQL access (development only)
+      Tags:
+        - Key: Name
+          Value: medical-appointment-rds-sg-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # Secrets Manager for RDS password
+  RDSMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: medical-appointment-rds-${self:provider.stage}
+      Description: Master password for Medical Appointment RDS instance
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}
+
+  # RDS Instance - Maximum dependencies for reliability
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Snapshot  # Create snapshot before major updates
+    DependsOn:
+      - DBSubnetGroup
+      - RDSSecurityGroup
+      - RDSMasterSecret
+      - PublicSubnet1RouteTableAssociation
+      - PublicSubnet2RouteTableAssociation
+      - VPCGatewayAttachment
+      - PublicRoute
+    Properties:
+      DBInstanceIdentifier: medical-appointments-db-${self:provider.stage}
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: "8.0"
+      MasterUsername: admin
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:medical-appointment-rds-${self:provider.stage}:SecretString:password}}"
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageType: gp2
+      StorageEncrypted: true
+      
+      # Network Configuration
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: true
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      
+      # Backup Configuration
+      BackupRetentionPeriod: 1
+      DeleteAutomatedBackups: true
+      PreferredBackupWindow: "03:00-04:00"
+      PreferredMaintenanceWindow: "sun:04:00-sun:05:00"
+      
+      # Single-AZ for development
+      MultiAZ: false
+      
+      Tags:
+        - Key: Name
+          Value: medical-appointments-db-${self:provider.stage}
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Stage
+          Value: ${self:provider.stage}

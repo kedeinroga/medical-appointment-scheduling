@@ -88,6 +88,9 @@ Resources:
   # DB Subnet Group
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
+    DependsOn:
+      - PublicSubnet1RouteTableAssociation
+      - PublicSubnet2RouteTableAssociation
     Properties:
       DBSubnetGroupDescription: Subnet group for Medical Appointment RDS instance
       SubnetIds:
@@ -142,6 +145,11 @@ Resources:
   RDSInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
+    DependsOn:
+      - VPCGatewayAttachment
+      - PublicRoute
+      - PublicSubnet1RouteTableAssociation
+      - PublicSubnet2RouteTableAssociation
     Properties:
       DBInstanceIdentifier: medical-appointments-db-${self:provider.stage}
       DBInstanceClass: db.t3.micro
