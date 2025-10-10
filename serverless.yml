@@ -105,7 +105,7 @@ provider:
             - kms:Decrypt
             - kms:GenerateDataKey
           Resource:
-            - Fn::ImportValue: ${self:service}-${self:provider.stage}-sqs-kms-key-arn
+            - Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-arn
 
 plugins:
   - serverless-esbuild
@@ -186,13 +186,8 @@ functions:
 
 # Infrastructure as Code - Import resource definitions
 resources:
-  - ${file(resources/kms.yml)}
-  - ${file(resources/dynamodb.yml)}
-  - ${file(resources/sns.yml)}
-  - ${file(resources/sqs.yml)}
-  - ${file(resources/eventbridge.yml)}
+  - ${file(resources/infrastructure.yml)}
   - ${file(resources/api-gateway.yml)}
-  - ${file(resources/iam.yml)}
 
 # Package configuration
 package:

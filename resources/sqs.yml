@@ -6,7 +6,8 @@ Resources:
     Properties:
       QueueName: medical-appointment-scheduling-appointments-pe-dlq-${self:provider.stage}
       MessageRetentionPeriod: 1209600 # 14 days
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.sqsKmsKeyId, 'alias/aws/sqs'}
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -28,7 +29,8 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt AppointmentsPEDeadLetterQueue.Arn
         maxReceiveCount: 3
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.sqsKmsKeyId, 'alias/aws/sqs'}
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -45,7 +47,8 @@ Resources:
     Properties:
       QueueName: medical-appointment-scheduling-appointments-cl-dlq-${self:provider.stage}
       MessageRetentionPeriod: 1209600 # 14 days
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.sqsKmsKeyId, 'alias/aws/sqs'}
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -67,7 +70,8 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt AppointmentsCLDeadLetterQueue.Arn
         maxReceiveCount: 3
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.sqsKmsKeyId, 'alias/aws/sqs'}
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -84,7 +88,8 @@ Resources:
     Properties:
       QueueName: medical-appointment-scheduling-appointments-completion-dlq-${self:provider.stage}
       MessageRetentionPeriod: 1209600 # 14 days
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.sqsKmsKeyId, 'alias/aws/sqs'}
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling
@@ -104,7 +109,8 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt AppointmentsCompletionDeadLetterQueue.Arn
         maxReceiveCount: 3
-      KmsMasterKeyId: ${file(config/${self:provider.stage}.yml):security.encryption.sqsKmsKeyId, 'alias/aws/sqs'}
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
       Tags:
         - Key: Service
           Value: medical-appointment-scheduling

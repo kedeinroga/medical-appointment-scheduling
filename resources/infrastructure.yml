@@ -1,0 +1,746 @@
+# Complete Infrastructure Resources - All related resources in correct order
+Resources:
+  # ========== DYNAMODB RESOURCES ==========
+  # Main appointments table
+  AppointmentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: medical-appointment-scheduling-appointments-${self:provider.stage}
+      BillingMode: ${file(config/${self:provider.stage}.yml):performance.dynamodb.billingMode}
+      AttributeDefinitions:
+        - AttributeName: appointmentId
+          AttributeType: S
+        - AttributeName: insuredId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+        - AttributeName: countryISO
+          AttributeType: S
+      KeySchema:
+        - AttributeName: appointmentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: insuredId-createdAt-index
+          KeySchema:
+            - AttributeName: insuredId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: status-createdAt-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: countryISO-createdAt-index
+          KeySchema:
+            - AttributeName: countryISO
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # ========== SQS RESOURCES ==========
+  # Dead Letter Queue for Peru appointments
+  AppointmentsPEDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-pe-dlq-${self:provider.stage}
+      MessageRetentionPeriod: 1209600 # 14 days
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: PE
+        - Key: Purpose
+          Value: dead-letter-queue
+
+  # Peru appointments processing queue
+  AppointmentsPEQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-pe-${self:provider.stage}
+      VisibilityTimeoutSeconds: 180 # 3 times lambda timeout
+      MessageRetentionPeriod: 1209600 # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AppointmentsPEDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: PE
+        - Key: Purpose
+          Value: appointment-processing
+
+  # Dead Letter Queue for Chile appointments
+  AppointmentsCLDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-cl-dlq-${self:provider.stage}
+      MessageRetentionPeriod: 1209600 # 14 days
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: CL
+        - Key: Purpose
+          Value: dead-letter-queue
+
+  # Chile appointments processing queue
+  AppointmentsCLQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-cl-${self:provider.stage}
+      VisibilityTimeoutSeconds: 180 # 3 times lambda timeout
+      MessageRetentionPeriod: 1209600 # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AppointmentsCLDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: CL
+        - Key: Purpose
+          Value: appointment-processing
+
+  # Dead Letter Queue for appointment completion
+  AppointmentsCompletionDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-completion-dlq-${self:provider.stage}
+      MessageRetentionPeriod: 1209600 # 14 days
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Purpose
+          Value: completion-dead-letter-queue
+
+  # Appointment completion queue (receives from EventBridge)
+  AppointmentsCompletionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: medical-appointment-scheduling-appointments-completion-${self:provider.stage}
+      VisibilityTimeoutSeconds: 180 # 3 times lambda timeout
+      MessageRetentionPeriod: 1209600 # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AppointmentsCompletionDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: 
+        Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-id
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Purpose
+          Value: appointment-completion
+
+  # ========== SNS RESOURCES ==========
+  # Main topic for appointment distribution (keeping for backward compatibility)
+  AppointmentsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: medical-appointment-scheduling-appointments-${self:provider.stage}
+      DisplayName: "Medical Appointments Distribution Topic"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # Peru specific topic
+  AppointmentsPETopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: medical-appointment-scheduling-appointments-pe-${self:provider.stage}
+      DisplayName: "Medical Appointments Peru Topic"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: PE
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # Chile specific topic
+  AppointmentsCLTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: medical-appointment-scheduling-appointments-cl-${self:provider.stage}
+      DisplayName: "Medical Appointments Chile Topic"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Country
+          Value: CL
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # ========== EVENTBRIDGE RESOURCES ==========
+  # Custom EventBridge Bus for medical appointments
+  MedicalAppointmentsEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: medical-appointment-scheduling-${self:provider.stage}
+      Description: "Custom event bus for medical appointment processing events"
+      Tags:
+        - Key: Service
+          Value: medical-appointment-scheduling
+        - Key: Environment
+          Value: ${self:provider.stage}
+        - Key: Layer
+          Value: infrastructure
+        - Key: ManagedBy
+          Value: serverless
+
+  # ========== IAM RESOURCES ==========
+  # IAM Role for EventBridge to send messages to SQS
+  EventBridgeExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: medical-appointment-scheduling-eventbridge-role-${self:provider.stage}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EventBridgeToSQSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource:
+                  - !GetAtt AppointmentsCompletionQueue.Arn
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource:
+                  - Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-arn
+
+  # Enhanced IAM Role for Lambda functions with specific permissions
+  MedicalAppointmentLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: medical-appointment-scheduling-lambda-execution-role-${self:provider.stage}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: MedicalAppointmentDynamoDBPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !GetAtt AppointmentsTable.Arn
+                  - !Sub "${AppointmentsTable.Arn}/index/*"
+        - PolicyName: MedicalAppointmentSNSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                  - sns:GetTopicAttributes
+                Resource:
+                  - !Ref AppointmentsTopic
+                  - !Ref AppointmentsPETopic
+                  - !Ref AppointmentsCLTopic
+        - PolicyName: MedicalAppointmentSQSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                Resource:
+                  - !GetAtt AppointmentsPEQueue.Arn
+                  - !GetAtt AppointmentsCLQueue.Arn
+                  - !GetAtt AppointmentsCompletionQueue.Arn
+        - PolicyName: MedicalAppointmentEventBridgePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                  - events:DescribeRule
+                  - events:ListTargetsByRule
+                Resource:
+                  - !GetAtt MedicalAppointmentsEventBus.Arn
+                  - !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/medical-appointment-scheduling-*"
+        - PolicyName: MedicalAppointmentKMSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                  - kms:CreateGrant
+                  - kms:DescribeKey
+                Resource:
+                  - Fn::ImportValue: medical-appointment-infrastructure-${self:provider.stage}-sqs-kms-key-arn
+        - PolicyName: MedicalAppointmentSSMPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/medical-appointment/${self:provider.stage}/*"
+        - PolicyName: MedicalAppointmentRDSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-data:ExecuteStatement
+                  - rds-data:BatchExecuteStatement
+                  - rds-data:BeginTransaction
+                  - rds-data:CommitTransaction
+                  - rds-data:RollbackTransaction
+                Resource: "*"
+        - PolicyName: MedicalAppointmentLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/medical-appointment-scheduling-${self:provider.stage}-*"
+
+  # API Gateway CloudWatch Logs Role
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  # ========== SNS-SQS INTEGRATION ==========
+  # Direct subscription from PE Topic to PE Queue (no filters needed)
+  AppointmentsPESubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AppointmentsPETopic
+      Endpoint: !GetAtt AppointmentsPEQueue.Arn
+      Protocol: sqs
+      RawMessageDelivery: false  # Include SNS metadata
+
+  # Direct subscription from CL Topic to CL Queue (no filters needed)  
+  AppointmentsCLSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AppointmentsCLTopic
+      Endpoint: !GetAtt AppointmentsCLQueue.Arn
+      Protocol: sqs
+      RawMessageDelivery: false  # Include SNS metadata
+
+  # ========== EVENTBRIDGE RULES ==========
+  # Rule for Peru appointment processed events
+  AppointmentProcessedPERule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: medical-appointment-scheduling-appointment-processed-pe-${self:provider.stage}
+      Description: "Rule to capture appointment processed events from Peru"
+      EventBusName: !Ref MedicalAppointmentsEventBus
+      EventPattern:
+        source:
+          - "medical-appointment-scheduling.appointment-processor"
+        detail-type:
+          - "Appointment Processed"
+        detail:
+          countryISO:
+            - "PE"
+          status:
+            - "processed"
+      Targets:
+        - Arn: !GetAtt AppointmentsCompletionQueue.Arn
+          Id: "AppointmentProcessedPETarget"
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
+
+  # Rule for Chile appointment processed events
+  AppointmentProcessedCLRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: medical-appointment-scheduling-appointment-processed-cl-${self:provider.stage}
+      Description: "Rule to capture appointment processed events from Chile"
+      EventBusName: !Ref MedicalAppointmentsEventBus
+      EventPattern:
+        source:
+          - "medical-appointment-scheduling.appointment-processor"
+        detail-type:
+          - "Appointment Processed"
+        detail:
+          countryISO:
+            - "CL"
+          status:
+            - "processed"
+      Targets:
+        - Arn: !GetAtt AppointmentsCompletionQueue.Arn
+          Id: "AppointmentProcessedCLTarget"
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
+
+  # Rule for appointment processing errors
+  AppointmentProcessingErrorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: medical-appointment-scheduling-appointment-error-${self:provider.stage}
+      Description: "Rule to capture appointment processing errors"
+      EventBusName: !Ref MedicalAppointmentsEventBus
+      EventPattern:
+        source:
+          - "medical-appointment-scheduling.appointment-processor"
+        detail-type:
+          - "Appointment Processing Error"
+        detail:
+          status:
+            - "error"
+      Targets:
+        - Arn: !GetAtt AppointmentsCompletionQueue.Arn
+          Id: "AppointmentProcessingErrorTarget"
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
+
+  # ========== RESOURCE POLICIES ==========
+  # Queue Policy to allow SNS to send messages to PE queue
+  AppointmentsPEQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentsPEQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSNSToSendMessage
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AppointmentsPEQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Ref AppointmentsPETopic
+
+  # Queue Policy to allow SNS to send messages to CL queue
+  AppointmentsCLQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentsCLQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSNSToSendMessage
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AppointmentsCLQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Ref AppointmentsCLTopic
+
+  # Queue Policy to allow EventBridge to send messages to completion queue
+  AppointmentsCompletionQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AppointmentsCompletionQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEventBridgeToSendMessage
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AppointmentsCompletionQueue.Arn
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
+  # SNS Topic Policy to allow Lambda to publish messages to main topic
+  AppointmentsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AppointmentsTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToPublish
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sns:Publish
+              - sns:GetTopicAttributes
+            Resource: !Ref AppointmentsTopic
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
+  # SNS Topic Policy to allow Lambda to publish messages to PE topic
+  AppointmentsPETopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AppointmentsPETopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToPublishPE
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sns:Publish
+              - sns:GetTopicAttributes
+            Resource: !Ref AppointmentsPETopic
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
+  # SNS Topic Policy to allow Lambda to publish messages to CL topic
+  AppointmentsCLTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AppointmentsCLTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToPublishCL
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sns:Publish
+              - sns:GetTopicAttributes
+            Resource: !Ref AppointmentsCLTopic
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+
+Outputs:
+  # DynamoDB Outputs
+  AppointmentsTableName:
+    Description: "Name of the Appointments DynamoDB table"
+    Value: !Ref AppointmentsTable
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-table-name
+
+  AppointmentsTableArn:
+    Description: "ARN of the Appointments DynamoDB table"
+    Value: !GetAtt AppointmentsTable.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-table-arn
+
+  AppointmentsTableStreamArn:
+    Description: "Stream ARN of the Appointments DynamoDB table"
+    Value: !GetAtt AppointmentsTable.StreamArn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-table-stream-arn
+
+  # SQS Outputs
+  AppointmentsPEQueueUrl:
+    Description: "URL of the Peru Appointments SQS Queue"
+    Value: !Ref AppointmentsPEQueue
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-queue-url
+
+  AppointmentsPEQueueArn:
+    Description: "ARN of the Peru Appointments SQS Queue"
+    Value: !GetAtt AppointmentsPEQueue.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-queue-arn
+
+  AppointmentsCLQueueUrl:
+    Description: "URL of the Chile Appointments SQS Queue"
+    Value: !Ref AppointmentsCLQueue
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-queue-url
+
+  AppointmentsCLQueueArn:
+    Description: "ARN of the Chile Appointments SQS Queue"
+    Value: !GetAtt AppointmentsCLQueue.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-queue-arn
+
+  AppointmentsCompletionQueueUrl:
+    Description: "URL of the Appointments Completion SQS Queue"
+    Value: !Ref AppointmentsCompletionQueue
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-completion-queue-url
+
+  AppointmentsCompletionQueueArn:
+    Description: "ARN of the Appointments Completion SQS Queue"
+    Value: !GetAtt AppointmentsCompletionQueue.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-completion-queue-arn
+
+  # SNS Outputs
+  AppointmentsTopicArn:
+    Description: "ARN of the Main Appointments SNS Topic"
+    Value: !Ref AppointmentsTopic
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-topic-arn
+
+  AppointmentsTopicName:
+    Description: "Name of the Main Appointments SNS Topic"
+    Value: !GetAtt AppointmentsTopic.TopicName
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-topic-name
+
+  AppointmentsPETopicArn:
+    Description: "ARN of the Peru Appointments SNS Topic"
+    Value: !Ref AppointmentsPETopic
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-topic-arn
+
+  AppointmentsPETopicName:
+    Description: "Name of the Peru Appointments SNS Topic"
+    Value: !GetAtt AppointmentsPETopic.TopicName
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-pe-topic-name
+
+  AppointmentsCLTopicArn:
+    Description: "ARN of the Chile Appointments SNS Topic"
+    Value: !Ref AppointmentsCLTopic
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-topic-arn
+
+  AppointmentsCLTopicName:
+    Description: "Name of the Chile Appointments SNS Topic"
+    Value: !GetAtt AppointmentsCLTopic.TopicName
+    Export:
+      Name: ${self:service}-${self:provider.stage}-appointments-cl-topic-name
+
+  # EventBridge Outputs
+  MedicalAppointmentsEventBusName:
+    Description: "Name of the Medical Appointments EventBridge Bus"
+    Value: !Ref MedicalAppointmentsEventBus
+    Export:
+      Name: ${self:service}-${self:provider.stage}-event-bus-name
+
+  MedicalAppointmentsEventBusArn:
+    Description: "ARN of the Medical Appointments EventBridge Bus"
+    Value: !GetAtt MedicalAppointmentsEventBus.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-event-bus-arn
+
+  # IAM Outputs
+  MedicalAppointmentLambdaExecutionRoleArn:
+    Description: "ARN of the Lambda Execution Role"
+    Value: !GetAtt MedicalAppointmentLambdaExecutionRole.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-lambda-execution-role-arn
+
+  ApiGatewayCloudWatchLogsRoleArn:
+    Description: "ARN of the API Gateway CloudWatch Logs Role"
+    Value: !GetAtt ApiGatewayCloudWatchLogsRole.Arn
+    Export:
+      Name: ${self:service}-${self:provider.stage}-apigateway-logs-role-arn

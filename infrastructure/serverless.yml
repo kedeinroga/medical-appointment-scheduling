@@ -32,6 +32,7 @@ custom:
 resources:
   - ${file(resources/s3.yml)}
   - ${file(resources/rds.yml)}
+  - ${file(resources/kms.yml)}
   - ${file(resources/parameter-store.yml)}
   - ${file(resources/outputs.yml)}
 
